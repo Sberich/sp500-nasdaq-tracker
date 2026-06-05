@@ -195,6 +195,12 @@ input {
 .filter-tabs .tab-btn[data-idx="NASDAQ100"].active { background: var(--purple); border-color: var(--purple); }
 .filter-tabs .tab-btn[data-idx="fav"].active { background: var(--yellow); border-color: var(--yellow); }
 
+.mover-tabs { margin-bottom: 12px; }
+.mover-tabs .tab-btn { font-size: 11px; display: flex; align-items: center; gap: 4px; justify-content: center; }
+.mover-tabs .tab-btn[data-mover="day_gainers"].active { background: var(--green); border-color: var(--green); }
+.mover-tabs .tab-btn[data-mover="day_losers"].active { background: var(--red); border-color: var(--red); }
+.mover-tabs .tab-btn[data-mover="most_actives"].active { background: var(--purple); border-color: var(--purple); }
+
 .sector-scroll {
     display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px;
     scrollbar-width: none; /* Firefox */

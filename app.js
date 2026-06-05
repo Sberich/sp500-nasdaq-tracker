@@ -61,19 +61,53 @@ function showConfigModal() {
 }
 
 // --- Event Listeners ---
+let currentMover = null; // 'day_gainers' | 'day_losers' | 'most_actives' | null
+let moverCache = {};
+
 function setupEventListeners() {
     // Search
-    elSearchInput.addEventListener('input', renderList);
+    elSearchInput.addEventListener('input', () => {
+        if (currentMover) return; // disable search in mover mode
+        renderList();
+    });
     
-    // Index Tabs
-    document.querySelectorAll('.filter-tabs .tab-btn').forEach(btn => {
+    // Index Tabs (ทั้งหมด, S&P500, NASDAQ, NYSE, โปรด)
+    document.querySelectorAll('.filter-tabs:not(.mover-tabs) .tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.filter-tabs .tab-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            currentIndex = e.target.dataset.idx;
-            currentSector = 'ทั้งหมด'; // Reset sector
+            // Deactivate mover tabs
+            currentMover = null;
+            document.querySelectorAll('.mover-btn').forEach(b => b.classList.remove('active'));
+            
+            // Activate index tab
+            document.querySelectorAll('.filter-tabs:not(.mover-tabs) .tab-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            currentIndex = e.currentTarget.dataset.idx;
+            currentSector = 'ทั้งหมด';
             buildSectorTabs();
             renderList();
+        });
+    });
+
+    // Market Mover Tabs (Gainers, Losers, Active)
+    document.querySelectorAll('.mover-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const moverId = e.currentTarget.dataset.mover;
+            
+            // If clicking same active mover, deactivate and go back to normal
+            if (currentMover === moverId) {
+                currentMover = null;
+                e.currentTarget.classList.remove('active');
+                renderList();
+                return;
+            }
+            
+            // Deactivate index tabs
+            document.querySelectorAll('.filter-tabs:not(.mover-tabs) .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.mover-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            
+            currentMover = moverId;
+            fetchMarketMovers(moverId);
         });
     });
     
@@ -110,7 +144,7 @@ function setupEventListeners() {
         btn.classList.toggle('is-fav', isFav);
         btn.innerHTML = isFav ? '<i class="ri-star-fill"></i>' : '<i class="ri-star-line"></i>';
         
-        renderList();
+        if (!currentMover) renderList();
     });
 }
 
@@ -578,4 +612,97 @@ function addChartAnnotations() {
     
     priceChart.options.plugins.annotation = { annotations };
     priceChart.update();
+}
+
+// --- Market Movers ---
+async function fetchMarketMovers(scrId) {
+    elStockList.innerHTML = `<div class="loader-container"><div class="spinner"></div><p>กำลังดึงข้อมูล Market Movers...</p></div>`;
+    elStatsBar.innerHTML = '';
+    
+    // Use cache if fresh (< 5 min)
+    if (moverCache[scrId] && Date.now() - moverCache[scrId].ts < 300000) {
+        renderMoverList(moverCache[scrId].data);
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_URL}?action=getMarketMovers&scrId=${scrId}`);
+        const data = await res.json();
+        
+        if (data.success) {
+            moverCache[scrId] = { data, ts: Date.now() };
+            renderMoverList(data);
+        } else {
+            showErrorList(data.error || 'ไม่สามารถดึงข้อมูลได้');
+        }
+    } catch(err) {
+        showErrorList('Network Error: ' + err.message);
+    }
+}
+
+function renderMoverList(data) {
+    const stocks = data.data || [];
+    const titleMap = { day_gainers: '🚀 Top Gainers', day_losers: '📉 Top Losers', most_actives: '🔥 Most Active' };
+    
+    elStatsBar.innerHTML = `<span>${titleMap[data.scrId] || ''}</span> · ${stocks.length} หุ้น · อัปเดต: ${data.fetchTime || ''}`;
+    
+    if (!stocks.length) {
+        elStockList.innerHTML = `<div class="loader-container"><p>ไม่พบข้อมูล</p></div>`;
+        return;
+    }
+    
+    elStockList.innerHTML = stocks.map(s => createMoverCard(s)).join('');
+    
+    // Click events for mover cards
+    document.querySelectorAll('.stock-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            openDetail(card.dataset.symbol);
+        });
+    });
+}
+
+function createMoverCard(s) {
+    const priceStr = s.price != null ? '$' + s.price.toFixed(2) : '—';
+    const chg = s.change, chgPct = s.changePct;
+    const isUp = chg != null && chg >= 0;
+    const chgStr = chg != null ? (isUp ? '+' : '') + chg.toFixed(2) : '—';
+    const pctStr = chgPct != null ? (isUp ? '+' : '') + chgPct.toFixed(2) + '%' : '—';
+    const colorClass = isUp ? 'ok' : 'near';
+    
+    const volStr = s.volume != null ? formatVolume(s.volume) : '—';
+    const logoUrl = `https://financialmodelingprep.com/image-stock/${s.symbol}.png`;
+    const initials = s.symbol.substring(0, 3);
+    
+    return `
+    <div class="stock-card" data-symbol="${s.symbol}">
+        <div class="sc-logo-wrapper">
+            <img class="sc-logo" src="${logoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="sc-logo-fallback" style="display:none">${initials}</div>
+        </div>
+        
+        <div class="sc-info">
+            <div class="sc-top">
+                <span class="sc-symbol">${s.symbol}</span>
+                <span class="sc-price mono">${priceStr}</span>
+            </div>
+            <div class="sc-mid">
+                <span class="sc-name">${s.name || ''}</span>
+                <span class="sc-pct ${colorClass} mono">${pctStr}</span>
+            </div>
+            <div class="sc-bot">
+                <span class="badge idx-sp">${s.exchange || 'US'}</span>
+                <span class="chip ${isUp ? 'r' : 's'}">${chgStr}</span>
+                <span class="badge" style="background:var(--border);color:var(--text-muted)">Vol ${volStr}</span>
+            </div>
+        </div>
+    </div>`;
+}
+
+function formatVolume(vol) {
+    if (vol >= 1e9) return (vol / 1e9).toFixed(1) + 'B';
+    if (vol >= 1e6) return (vol / 1e6).toFixed(1) + 'M';
+    if (vol >= 1e3) return (vol / 1e3).toFixed(0) + 'K';
+    return vol.toString();
 }
