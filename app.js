@@ -7,6 +7,7 @@ let currentRange = '1M';
 let currentSector = 'ทั้งหมด';
 let currentIndex = 'all';
 let priceChart = null;
+let currentLevelsData = null;
 
 // --- DOM Elements ---
 const elStockList = document.getElementById('stock-list');
@@ -306,6 +307,8 @@ function openDetail(symbol) {
     document.getElementById('levels-list').innerHTML = '<div class="loader-container"><div class="spinner"></div><p>กำลังวิเคราะห์แนวรับ-ต้าน...</p></div>';
     document.getElementById('trend-badge-wrap').innerHTML = '';
     
+    currentLevelsData = null;
+    
     loadLiveLevels();
     loadChartData();
 }
@@ -316,7 +319,9 @@ async function loadLiveLevels() {
         const data = await res.json();
         
         if (data.success) {
+            currentLevelsData = data;
             renderLiveLevels(data);
+            addChartAnnotations();
         } else {
             document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-error-warning-line"></i> ${data.error}</p>`;
             document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na">ไม่สามารถโหลดข้อมูล EMA</span>';
@@ -421,7 +426,7 @@ async function loadChartData() {
             }
             
             // Render Chart
-            const emaLabelMap = { '4H':'EMA50 (4H)', '1M':'EMA200 D', '6M':'EMA200 D', 'YTD':'EMA200 D', '1Y':'EMA40 W', '5Y':'EMA10 M' };
+            const emaLabelMap = { '1H':'EMA200 (1H)', '4H':'EMA50 (4H)', '1M':'EMA200 D', '6M':'EMA200 D', 'YTD':'EMA200 D', '1Y':'EMA40 W', '5Y':'EMA10 M' };
             document.getElementById('ema-label').textContent = emaLabelMap[currentRange] || 'EMA';
             
             renderChart(data.points, data.emaSeries || [], data.currentPrice);
@@ -540,4 +545,37 @@ function renderChart(points, emaSeries, livePrice) {
             }
         }
     });
+    
+    addChartAnnotations();
+}
+
+function addChartAnnotations() {
+    if (!priceChart || !currentLevelsData) return;
+    
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const sColor = isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(22, 163, 74, 0.4)';
+    const rColor = isDark ? 'rgba(239, 68, 68, 0.4)' : 'rgba(220, 38, 38, 0.4)';
+
+    const annotations = {};
+    const supports = currentLevelsData.supports || [];
+    const resists = currentLevelsData.resists || [];
+    
+    supports.forEach((s, i) => {
+        annotations['s'+i] = {
+            type: 'line', yMin: s.price, yMax: s.price,
+            borderColor: sColor, borderWidth: 1.5, borderDash: [4, 4],
+            label: { display: true, content: 'S'+(i+1)+' $'+s.price.toFixed(2), position: 'start', backgroundColor: 'transparent', color: sColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+        };
+    });
+    
+    [...resists].reverse().forEach((r, i) => {
+        annotations['r'+i] = {
+            type: 'line', yMin: r.price, yMax: r.price,
+            borderColor: rColor, borderWidth: 1.5, borderDash: [4, 4],
+            label: { display: true, content: 'R'+(resists.length-i)+' $'+r.price.toFixed(2), position: 'start', backgroundColor: 'transparent', color: rColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+        };
+    });
+    
+    priceChart.options.plugins.annotation = { annotations };
+    priceChart.update();
 }
