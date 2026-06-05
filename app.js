@@ -248,7 +248,8 @@ function renderList() {
 
 function createStockCard(s) {
     const priceStr = s.price != null ? '$' + s.price.toFixed(2) : '—';
-    const pct = s.pctS1, absPct = pct != null ? Math.abs(pct) : null;
+    const pct = s.pctS1 != null ? s.pctS1 * 100 : null;
+    const absPct = pct != null ? Math.abs(pct) : null;
     let colorClass = '', pctClass = 'ok', pctStr = '—';
     
     if (pct != null) {
