@@ -109,6 +109,29 @@ input {
     display: flex;
     align-items: center;
     gap: 16px;
+    width: 300px;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.header-filters {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-filters .modern-select {
+    width: 220px;
+    padding: 8px 14px;
+    font-size: 12px;
+}
+
+.header-filters .filter-tabs {
+    margin-bottom: 0;
 }
 
 .logo-box {

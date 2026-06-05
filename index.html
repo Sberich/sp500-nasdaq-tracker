@@ -36,6 +36,20 @@
                     <p class="subtitle">S&P500 & NASDAQ100 Analysis</p>
                 </div>
             </div>
+            <div class="header-center">
+                <div class="header-filters">
+                    <div class="filter-tabs mover-tabs">
+                        <button class="tab-btn mover-btn" data-mover="day_gainers"><i class="ri-rocket-2-line"></i> Gainers</button>
+                        <button class="tab-btn mover-btn" data-mover="day_losers"><i class="ri-arrow-down-circle-line"></i> Losers</button>
+                        <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
+                    </div>
+                    <select id="sector-select" class="modern-select">
+                        <option value="ทั้งหมด">All Sectors (ทั้งหมด)</option>
+                        <!-- Sectors populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            
             <div class="header-right">
                 <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
                     <i class="ri-moon-fill"></i>
@@ -63,23 +77,6 @@
                             <button class="tab-btn" data-idx="NYSE">NYSE</button>
                             <button class="tab-btn" data-idx="fav"><i class="ri-star-fill"></i> โปรด</button>
                         </div>
-                    </div>
-
-                    <div class="filter-group">
-                        <div class="filter-label">MOVERS</div>
-                        <div class="filter-tabs mover-tabs">
-                            <button class="tab-btn mover-btn" data-mover="day_gainers"><i class="ri-rocket-2-line"></i> Gainers</button>
-                            <button class="tab-btn mover-btn" data-mover="day_losers"><i class="ri-arrow-down-circle-line"></i> Losers</button>
-                            <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
-                        </div>
-                    </div>
-
-                    <div class="filter-group" style="padding-bottom: 0; border-bottom: none;">
-                        <div class="filter-label">SECTORS</div>
-                        <select id="sector-select" class="modern-select">
-                            <option value="ทั้งหมด">All Sectors (ทั้งหมด)</option>
-                            <!-- Sectors populated dynamically -->
-                        </select>
                     </div>
 
                     <div class="stats-bar" id="stats-bar">
