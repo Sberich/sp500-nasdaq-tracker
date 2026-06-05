@@ -380,32 +380,32 @@ input {
 
 .section-hdr { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 8px; margin-bottom: 8px; margin-top: 16px;}
 .section-hdr:first-child { margin-top: 0; }
-.section-hdr.resist { background: var(--green-bg); color: var(--green); }
-.section-hdr.support { background: var(--red-bg); color: var(--red); }
+.section-hdr.resist { background: var(--red-bg); color: var(--red); }
+.section-hdr.support { background: var(--green-bg); color: var(--green); }
 
 .level-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 12px; margin-bottom: 8px; border: 1px solid transparent; }
-.level-row.resist { background: var(--green-bg); border-color: rgba(34, 197, 94, 0.2); }
-.level-row.support { background: var(--red-bg); border-color: rgba(239, 68, 68, 0.2); }
+.level-row.resist { background: var(--red-bg); border-color: rgba(239, 68, 68, 0.2); }
+.level-row.support { background: var(--green-bg); border-color: rgba(34, 197, 94, 0.2); }
 .level-row.ema { background: var(--yellow-bg); border-color: rgba(234, 179, 8, 0.2); }
 
 .lr-left { display: flex; flex-direction: column; gap: 4px; }
 .lr-label { font-size: 14px; font-weight: 700; }
-.lr-label.resist { color: var(--green); }
-.lr-label.support { color: var(--red); }
+.lr-label.resist { color: var(--red); }
+.lr-label.support { color: var(--green); }
 .lr-label.ema { color: var(--yellow); }
 .lr-method { font-size: 11px; color: var(--text-muted); }
 
 .lr-right { text-align: right; }
 .lr-price { font-size: 15px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;}
 .lr-pct { font-size: 12px; font-family: 'IBM Plex Mono', monospace; font-weight: 600;}
-.lr-pct.resist { color: var(--green); }
-.lr-pct.support { color: var(--red); }
+.lr-pct.resist { color: var(--red); }
+.lr-pct.support { color: var(--green); }
 .lr-pct.ema { color: var(--yellow); }
 
 .score-bar { display: flex; gap: 3px; margin-top: 4px; }
 .sdot { width: 8px; height: 8px; border-radius: 50%; }
-.sdot.on-support { background: var(--red); box-shadow: 0 0 4px var(--red); }
-.sdot.on-resist { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.sdot.on-support { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.sdot.on-resist { background: var(--red); box-shadow: 0 0 4px var(--red); }
 .sdot.off { background: var(--border-strong); }
 
 .price-now-badge { display: flex; align-items: center; gap: 12px; margin: 16px 0; }

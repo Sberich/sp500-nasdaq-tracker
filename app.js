@@ -366,7 +366,7 @@ function renderLiveLevels(data) {
     let html = '';
     
     // Resists
-    html += '<div class="section-hdr resist">🟢 แนวต้าน (โซนขาย)</div>';
+    html += '<div class="section-hdr resist">🔴 แนวต้าน (โซนขาย)</div>';
     if (!rst.length) html += '<p class="help-text">ไม่พบแนวต้านที่ชัดเจนในระยะใกล้</p>';
     [...rst].reverse().forEach((r, i) => { html += createLevelRow('resist', 'R' + (rst.length - i), r, price); });
     
@@ -374,7 +374,7 @@ function renderLiveLevels(data) {
     html += `<div class="price-now-badge"><span class="price-now-inner"><i class="ri-focus-3-line"></i> ราคาปัจจุบัน $${price.toFixed(2)}</span></div>`;
     
     // Supports
-    html += '<div class="section-hdr support">🔴 แนวรับ (โซนซื้อ)</div>';
+    html += '<div class="section-hdr support">🟢 แนวรับ (โซนซื้อ)</div>';
     if (!sup.length) html += '<p class="help-text">ไม่พบแนวรับที่ชัดเจนในระยะใกล้</p>';
     sup.forEach((s, i) => { html += createLevelRow('support', 'S' + (i + 1), s, price); });
     
