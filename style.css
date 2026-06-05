@@ -183,7 +183,22 @@ input {
     box-shadow: 0 0 0 2px var(--blue-bg);
 }
 
-.filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.filter-group {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.filter-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.filter-tabs { display: flex; gap: 6px; }
 .filter-tabs .tab-btn {
     flex: 1; padding: 6px 4px; font-size: 12px; font-weight: 600;
     border-radius: 8px; border: 1px solid var(--border-strong);
@@ -195,23 +210,35 @@ input {
 .filter-tabs .tab-btn[data-idx="NASDAQ100"].active { background: var(--purple); border-color: var(--purple); }
 .filter-tabs .tab-btn[data-idx="fav"].active { background: var(--yellow); border-color: var(--yellow); }
 
-.mover-tabs { margin-bottom: 12px; }
+.mover-tabs { margin-top: 4px; }
 .mover-tabs .tab-btn { font-size: 11px; display: flex; align-items: center; gap: 4px; justify-content: center; }
 .mover-tabs .tab-btn[data-mover="day_gainers"].active { background: var(--green); border-color: var(--green); }
 .mover-tabs .tab-btn[data-mover="day_losers"].active { background: var(--red); border-color: var(--red); }
 .mover-tabs .tab-btn[data-mover="most_actives"].active { background: var(--purple); border-color: var(--purple); }
 
-.sector-scroll {
-    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px;
-    scrollbar-width: none; /* Firefox */
+.modern-select {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    background: var(--card-bg);
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 500;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 20px;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-sm);
 }
-.sector-scroll::-webkit-scrollbar { display: none; }
-.sector-btn {
-    white-space: nowrap; padding: 4px 12px; border-radius: 20px;
-    font-size: 11px; font-weight: 500; border: 1px solid var(--border-strong);
-    background: var(--bg); color: var(--text-muted);
+.modern-select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px var(--blue-bg);
 }
-.sector-btn.active { background: var(--text-main); color: var(--bg); border-color: var(--text-main); }
 
 .stats-bar { font-size: 11px; color: var(--text-muted); padding: 4px 0; }
 .stats-bar span { font-weight: 600; color: var(--text-main); }

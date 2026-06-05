@@ -12,7 +12,6 @@ let currentLevelsData = null;
 // --- DOM Elements ---
 const elStockList = document.getElementById('stock-list');
 const elSearchInput = document.getElementById('search-input');
-const elSectorTabs = document.getElementById('sector-tabs');
 const elStatsBar = document.getElementById('stats-bar');
 const elDetailPanel = document.getElementById('detail-panel');
 const elEmptyState = document.getElementById('empty-state');
@@ -133,6 +132,12 @@ function setupEventListeners() {
         if(priceChart) priceChart.resetZoom();
     });
 
+    // Sector Select
+    document.getElementById('sector-select').addEventListener('change', (e) => {
+        currentSector = e.target.value;
+        renderList();
+    });
+    
     // Favorite Button in Detail
     document.getElementById('d-fav-btn').addEventListener('click', () => {
         if (!currentSymbol) return;
@@ -179,21 +184,14 @@ function buildSectorTabs() {
     });
     const sectors = ['ทั้งหมด', ...new Set(filtered.map(s => s.sector).filter(Boolean))];
     
-    elSectorTabs.innerHTML = sectors.map(s => 
-        `<button class="sector-btn ${s === currentSector ? 'active' : ''}" data-sector="${s}">
-            ${s === 'ทั้งหมด' ? '<i class="ri-search-eye-line"></i> ทั้งหมด' : s}
-        </button>`
-    ).join('');
+    const select = document.getElementById('sector-select');
+    if (!select) return;
     
-    elSectorTabs.querySelectorAll('.sector-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const target = e.currentTarget;
-            elSectorTabs.querySelectorAll('.sector-btn').forEach(b => b.classList.remove('active'));
-            target.classList.add('active');
-            currentSector = target.dataset.sector;
-            renderList();
-        });
-    });
+    select.innerHTML = sectors.map(s => 
+        `<option value="${s}" ${s === currentSector ? 'selected' : ''}>
+            ${s === 'ทั้งหมด' ? 'All Sectors (ทั้งหมด)' : s}
+        </option>`
+    ).join('');
 }
 
 function renderList() {
@@ -254,7 +252,7 @@ function createStockCard(s) {
     let colorClass = '', pctClass = 'ok', pctStr = '—';
     
     if (pct != null) {
-        pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        pctStr = 'S1: ' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
         if (absPct < 1) { colorClass = 'near'; pctClass = 'near'; }
         else if (absPct < 3) { colorClass = 'close'; pctClass = 'close'; }
     }
