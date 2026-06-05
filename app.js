@@ -596,7 +596,7 @@ function addChartAnnotations() {
         annotations['s'+i] = {
             type: 'line', yMin: s.price, yMax: s.price,
             borderColor: sColor, borderWidth: 1.5, borderDash: [4, 4],
-            label: { display: true, content: 'S'+(i+1)+' $'+s.price.toFixed(2), position: 'start', backgroundColor: 'transparent', color: sColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+            label: { display: true, content: 'S'+(i+1)+' $'+s.price.toFixed(2), position: 'end', yAdjust: -10, backgroundColor: 'transparent', color: sColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
         };
     });
     
@@ -604,7 +604,7 @@ function addChartAnnotations() {
         annotations['r'+i] = {
             type: 'line', yMin: r.price, yMax: r.price,
             borderColor: rColor, borderWidth: 1.5, borderDash: [4, 4],
-            label: { display: true, content: 'R'+(resists.length-i)+' $'+r.price.toFixed(2), position: 'start', backgroundColor: 'transparent', color: rColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+            label: { display: true, content: 'R'+(resists.length-i)+' $'+r.price.toFixed(2), position: 'end', yAdjust: -10, backgroundColor: 'transparent', color: rColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
         };
     });
     
