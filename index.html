@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>S&P500 + NASDAQ100 Pro</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+
+    <!-- Chart.js & Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- App Container -->
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header glass">
+            <div class="header-left">
+                <div class="logo-box">
+                    <i class="ri-stock-line"></i>
+                </div>
+                <div>
+                    <h1>Market Matrix Pro</h1>
+                    <p class="subtitle">S&P500 & NASDAQ100 Analysis</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
+                    <i class="ri-moon-fill"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <main class="main-layout">
+            
+            <!-- Left Panel: List & Filters -->
+            <section class="panel-left" id="list-panel">
+                <div class="filters-container glass">
+                    <div class="search-box">
+                        <i class="ri-search-line"></i>
+                        <input type="text" id="search-input" placeholder="ค้นหา Symbol หรือชื่อบริษัท...">
+                    </div>
+                    
+                    <div class="filter-tabs">
+                        <button class="tab-btn active" data-idx="all">ทั้งหมด</button>
+                        <button class="tab-btn" data-idx="S&P500">S&P500</button>
+                        <button class="tab-btn" data-idx="NASDAQ100">NASDAQ</button>
+                        <button class="tab-btn" data-idx="NYSE">NYSE</button>
+                        <button class="tab-btn" data-idx="fav"><i class="ri-star-fill"></i> โปรด</button>
+                    </div>
+
+                    <div class="sector-scroll" id="sector-tabs">
+                        <!-- Sectors populated dynamically -->
+                    </div>
+
+                    <div class="stats-bar" id="stats-bar">
+                        <!-- Stats populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="stock-list-container">
+                    <div id="stock-list">
+                        <!-- Loader initial state -->
+                        <div class="loader-container">
+                            <div class="spinner"></div>
+                            <p>กำลังเชื่อมต่อข้อมูล...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Detail View -->
+            <section class="panel-right hidden-mobile" id="detail-panel">
+                <div class="detail-empty-state" id="empty-state">
+                    <div class="empty-icon"><i class="ri-line-chart-line"></i></div>
+                    <h3>เลือกหุ้นเพื่อดูบทวิเคราะห์</h3>
+                    <p>คลิกที่รายชื่อหุ้นด้านซ้ายมือเพื่อดูแนวรับ-แนวต้าน, กราฟ, และข้อมูล EMA เชิงลึก</p>
+                </div>
+
+                <div class="detail-content hidden" id="detail-content">
+                    <div class="detail-header glass">
+                        <button class="icon-btn mobile-back-btn" id="btn-back">
+                            <i class="ri-arrow-left-line"></i>
+                        </button>
+                        <div class="stock-title-group">
+                            <h2 class="mono" id="d-symbol">AAPL</h2>
+                            <span class="badge" id="d-idx-badge">NASDAQ</span>
+                        </div>
+                        <div class="action-group">
+                            <button class="icon-btn fav-btn" id="d-fav-btn"><i class="ri-star-line"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="detail-scroll">
+                        <!-- Hero Price Info -->
+                        <div class="hero-card glass">
+                            <p class="company-name" id="d-fullname">Apple Inc.</p>
+                            <p class="sector-name" id="d-sector">Technology</p>
+                            
+                            <div class="price-row">
+                                <h1 class="mono" id="d-price">$0.00</h1>
+                                <div class="price-change" id="d-change">+0.00 (+0.00%)</div>
+                            </div>
+                            
+                            <div class="trend-container" id="trend-badge-wrap">
+                                <!-- Trend badge here -->
+                            </div>
+                        </div>
+
+                        <!-- EMA Bar -->
+                        <div class="ema-container glass" id="ema-bar">
+                            <span class="ema-chip na"><div class="spinner-small"></div> กำลังโหลดข้อมูล...</span>
+                        </div>
+
+                        <!-- Chart Section -->
+                        <div class="chart-card glass">
+                            <div class="chart-header">
+                                <div class="range-selector">
+                                    <button class="range-btn tf-4h" data-range="4H">4H</button>
+                                    <button class="range-btn active" data-range="1M">1M</button>
+                                    <button class="range-btn" data-range="6M">6M</button>
+                                    <button class="range-btn" data-range="YTD">YTD</button>
+                                    <button class="range-btn" data-range="1Y">1Y</button>
+                                    <button class="range-btn" data-range="5Y">5Y</button>
+                                </div>
+                                <div class="chart-legend">
+                                    <span class="legend-item"><span class="dot blue"></span> ราคาปิด</span>
+                                    <span class="legend-item"><span class="dot orange"></span> <span id="ema-label">EMA</span></span>
+                                    <span class="legend-item rsi-box" id="d-rsi">RSI: —</span>
+                                </div>
+                            </div>
+                            
+                            <div class="canvas-container">
+                                <canvas id="priceChart"></canvas>
+                                <div class="chart-loader" id="chart-loading">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+
+                            <div class="chart-footer">
+                                <span class="hint"><i class="ri-mouse-line"></i> Scroll=Zoom | <i class="ri-drag-move-fill"></i> Drag=Pan</span>
+                                <button class="action-btn-small" id="btn-reset-zoom"><i class="ri-refresh-line"></i> Reset</button>
+                            </div>
+                        </div>
+
+                        <!-- Levels Section -->
+                        <div class="levels-card glass">
+                            <div class="card-title">
+                                <h3><i class="ri-flashlight-line"></i> แนวรับ-แนวต้าน (ระยะ >3%)</h3>
+                                <span class="calc-time" id="calc-time"></span>
+                            </div>
+                            
+                            <div class="levels-list" id="levels-list">
+                                <!-- Populated dynamically -->
+                                <div class="loader-container">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Legend -->
+                        <div class="legend-card glass">
+                            <p class="legend-title"><i class="ri-information-line"></i> อัลกอริทึมการคำนวณคะแนน</p>
+                            <div class="tags-container">
+                                <span class="tag purple">Weekly Swing ×4</span>
+                                <span class="tag">Daily Swing ×3</span>
+                                <span class="tag">Fib Ret ×2</span>
+                                <span class="tag">Fib Ext ×2</span>
+                                <span class="tag">Pivot ×1</span>
+                                <span class="tag">Round Number ×1</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Configuration Modal (For setting API URL) -->
+    <div class="modal-overlay" id="config-modal">
+        <div class="modal glass">
+            <h2><i class="ri-settings-4-line"></i> ตั้งค่าเชื่อมต่อฐานข้อมูล</h2>
+            <p>กรุณาระบุ URL ของ Google Apps Script (Web App) เพื่อดึงข้อมูล</p>
+            <input type="text" id="api-url-input" class="full-input" placeholder="https://script.google.com/macros/s/.../exec">
+            <div class="modal-actions">
+                <button class="btn primary" id="btn-save-api">บันทึกและโหลดข้อมูล</button>
+            </div>
+            <p class="help-text">ข้อมูลจะถูกบันทึกไว้ในเบราว์เซอร์ของคุณ</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
