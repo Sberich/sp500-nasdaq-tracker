@@ -390,7 +390,7 @@ input {
 .range-group { display: flex; flex-direction: column; gap: 6px; }
 .range-label { font-size: 13px; font-weight: 500; color: var(--text-main); }
 .range-bar-container { display: flex; align-items: center; gap: 16px; }
-.range-min, .range-max { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text-main); }
+.range-min, .range-max { font-size: 12px; color: var(--text-main); font-weight: 500;}
 .range-bar {
     flex: 1; height: 2px; border-radius: 1px;
     background: var(--border-strong);
