@@ -560,6 +560,6 @@ input {
     .price-row h1 { font-size: 28px; }
     .hero-right-col { padding-left: 0; text-align: center; }
     .ema-container { justify-content: center; }
-    .chart-card { padding: 16px 4px; }
-    .chart-header { padding: 0 8px; }
+    .chart-card { margin: 0 -16px; padding: 16px 2px; border-radius: 0; border-left: none; border-right: none; }
+    .chart-header { padding: 0 12px; }
 }
