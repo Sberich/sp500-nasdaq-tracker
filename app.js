@@ -474,13 +474,15 @@ async function loadChartData() {
                     document.getElementById('d-52w-marker').style.left = `50%`;
                 }
 
-                const mcap = data.quote.marketCap;
-                if (mcap) {
-                    document.getElementById('d-mcap').textContent = (mcap >= 1e12) ? `$${(mcap / 1e12).toFixed(2)}T` : (mcap >= 1e9) ? `$${(mcap / 1e9).toFixed(2)}B` : (mcap >= 1e6) ? `$${(mcap / 1e6).toFixed(2)}M` : `$${mcap}`;
-                } else { document.getElementById('d-mcap').textContent = '—'; }
+                const dayHigh = data.quote.dayHigh;
+                if (dayHigh) {
+                    document.getElementById('d-dayhigh').textContent = `$${dayHigh.toFixed(2)}`;
+                } else { document.getElementById('d-dayhigh').textContent = '—'; }
 
-                const pe = data.quote.trailingPE;
-                document.getElementById('d-pe').textContent = pe ? pe.toFixed(2) : '—';
+                const dayLow = data.quote.dayLow;
+                if (dayLow) {
+                    document.getElementById('d-daylow').textContent = `$${dayLow.toFixed(2)}`;
+                } else { document.getElementById('d-daylow').textContent = '—'; }
 
                 const vol = data.quote.volume;
                 if (vol) {
