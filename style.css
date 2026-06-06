@@ -371,17 +371,18 @@ input {
 }
 
 .hero-card {
-    padding: 24px; border-radius: 16px;
+    padding: 20px; border-radius: 16px;
     display: grid;
-    grid-template-columns: 1fr minmax(280px, 320px);
-    gap: 32px;
+    grid-template-columns: 1.2fr 1fr minmax(260px, 300px);
+    gap: 20px;
     align-items: stretch;
 }
-.hero-left { text-align: left; border-right: 1px solid var(--border); padding-right: 32px; display: flex; flex-direction: column; justify-content: center; }
+.hero-left { text-align: left; border-right: 1px solid var(--border-strong); padding-right: 20px; display: flex; flex-direction: column; justify-content: center; }
+.hero-center { border-right: 1px solid var(--border-strong); padding-right: 20px; display: flex; flex-direction: column; justify-content: center; }
 .company-name { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 2px;}
-.sector-name { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
-.price-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 16px; }
-.price-row h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; }
+.sector-name { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+.price-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 12px; }
+.price-row h1 { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
 .price-change { font-size: 15px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;}
 
 .hero-right-col { display: flex; flex-direction: column; gap: 24px; padding-left: 10px;}
@@ -552,8 +553,9 @@ input {
     .app-header { padding: 12px 16px; }
     .detail-header { padding: 12px 16px; }
     .detail-scroll { padding: 16px; }
-    .hero-card { padding: 16px; grid-template-columns: 1fr; gap: 24px; text-align: center; }
-    .hero-left { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+    .hero-card { padding: 16px; grid-template-columns: 1fr; gap: 16px; text-align: center; }
+    .hero-left { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border-strong); padding-bottom: 16px; align-items: center;}
+    .hero-center { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border-strong); padding-bottom: 16px; }
     .price-row { align-items: center; }
     .price-row h1 { font-size: 28px; }
     .hero-right-col { padding-left: 0; text-align: center; }
