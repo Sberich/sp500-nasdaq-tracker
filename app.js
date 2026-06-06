@@ -481,14 +481,12 @@ async function loadChartData() {
                 if (low && high && data.currentPrice) {
                     document.getElementById('d-52w-low').textContent = `$${low.toFixed(2)}`;
                     document.getElementById('d-52w-high').textContent = `$${high.toFixed(2)}`;
-                    document.getElementById('d-52w-price').textContent = `$${data.currentPrice.toFixed(2)}`;
                     let pct = ((data.currentPrice - low) / (high - low)) * 100;
                     pct = Math.max(0, Math.min(100, pct));
                     document.getElementById('d-52w-marker').style.left = `${pct}%`;
                 } else {
                     document.getElementById('d-52w-low').textContent = `—`;
                     document.getElementById('d-52w-high').textContent = `—`;
-                    document.getElementById('d-52w-price').textContent = ``;
                     document.getElementById('d-52w-marker').style.left = `50%`;
                 }
 
