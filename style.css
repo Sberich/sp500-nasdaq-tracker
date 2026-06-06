@@ -371,24 +371,24 @@ input {
 }
 
 .hero-card {
-    padding: 32px; border-radius: 16px;
+    padding: 24px; border-radius: 16px;
     display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 40px;
-    align-items: center;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: stretch;
 }
-.hero-left { text-align: left; border-right: 1px solid var(--border); padding-right: 40px; }
-.company-name { font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 2px;}
-.sector-name { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
-.price-row { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 20px; }
-.price-row h1 { font-size: 42px; font-weight: 800; letter-spacing: -1.5px; }
+.hero-left { text-align: left; border-right: 1px solid var(--border); padding-right: 32px; display: flex; flex-direction: column; justify-content: center; }
+.company-name { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 2px;}
+.sector-name { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+.price-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 16px; }
+.price-row h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; }
 .price-change { font-size: 15px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;}
 
 .hero-right-col { display: flex; flex-direction: column; gap: 24px; padding-left: 10px;}
 
-.ranges-container { display: flex; flex-direction: column; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-strong); }
-.range-group { display: flex; flex-direction: column; gap: 8px; }
-.range-label { font-size: 13px; font-weight: 500; color: var(--text-main); font-family: 'IBM Plex Mono', monospace;}
+.ranges-container { display: flex; flex-direction: column; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border-strong); }
+.range-group { display: flex; flex-direction: column; gap: 6px; }
+.range-label { font-size: 13px; font-weight: 500; color: var(--text-main); }
 .range-bar-container { display: flex; align-items: center; gap: 16px; }
 .range-min, .range-max { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text-main); }
 .range-bar {
@@ -423,11 +423,12 @@ input {
 .trend-badge.strong-down { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
 
 .ema-container {
-    padding: 12px 24px; border-radius: 12px;
-    display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+    padding: 0; margin-top: 20px;
+    display: flex; justify-content: flex-start; gap: 10px; flex-wrap: wrap;
+    background: transparent; border: none; box-shadow: none;
 }
 .ema-chip {
-    padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;
     display: flex; align-items: center; gap: 6px;
 }
 .ema-chip.above { background: var(--green-bg); color: var(--green); }
