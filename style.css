@@ -419,7 +419,7 @@ input {
 
 .trend-badge {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    padding: 6px 10px; border-radius: 20px; font-size: 13px; font-weight: 600;
 }
 .trend-badge.strong-up { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
 .trend-badge.up { background: var(--green-bg); color: var(--green); }
