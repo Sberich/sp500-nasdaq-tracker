@@ -588,6 +588,9 @@ function renderChart(points, emaData, livePrice) {
         });
     }
 
+    const isMobile = window.innerWidth <= 768;
+    const hideTicks = isMobile && (currentRange === '1H' || currentRange === '4H');
+
     priceChart = new Chart(canvas, {
         type: 'line',
         data: { labels, datasets },
@@ -618,7 +621,7 @@ function renderChart(points, emaData, livePrice) {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: textColor, maxTicksLimit: 6, font: { size: 11 }, align: 'inner' }
+                    ticks: { display: !hideTicks, color: textColor, maxTicksLimit: 6, font: { size: 11 }, align: 'inner' }
                 },
                 y: {
                     position: 'right',
