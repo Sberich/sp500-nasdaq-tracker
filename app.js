@@ -3,7 +3,7 @@ let API_URL = localStorage.getItem('SP_API_URL') || 'https://script.google.com/m
 let allStocks = [];
 let favorites = JSON.parse(localStorage.getItem('SP_FAVS') || '[]');
 let currentSymbol = '';
-let currentRange = '1D';
+let currentRange = '1M';
 let currentSector = 'ทั้งหมด';
 let currentIndex = 'all';
 let priceChart = null;
@@ -458,11 +458,10 @@ async function loadChartData() {
                 el.className = 'price-change mono ' + (chg >= 0 ? 'up' : 'down');
             }
             
-            // Render Chart
-            const emaLabelMap = { '1H':'EMA200 (1H)', '4H':'EMA50 (4H)', '1M':'EMA200 D', '6M':'EMA200 D', 'YTD':'EMA200 D', '1Y':'EMA40 W', '5Y':'EMA10 M' };
-            document.getElementById('ema-label').textContent = emaLabelMap[currentRange] || 'EMA';
+            const emaLabels = (data.emaData || []).map(e => `EMA${e.period}`).join(', ');
+            document.getElementById('ema-label').textContent = emaLabels || 'EMA';
             
-            renderChart(data.points, data.emaSeries || [], data.currentPrice);
+            renderChart(data.points, data.emaData || [], data.currentPrice);
         }
     } catch (err) {
         document.getElementById('chart-loading').classList.remove('active');
@@ -483,7 +482,7 @@ function calcRSI(prices, period = 14) {
     return Math.round((100 - 100 / (1 + avgG / (avgL || 0.0001))) * 100) / 100;
 }
 
-function renderChart(points, emaSeries, livePrice) {
+function renderChart(points, emaData, livePrice) {
     const canvas = document.getElementById('priceChart');
     if (priceChart) { priceChart.destroy(); }
     
@@ -525,16 +524,20 @@ function renderChart(points, emaSeries, livePrice) {
         pointHitRadius: 10
     }];
     
-    if (emaSeries && emaSeries.length > 0) {
-        datasets.push({
-            label: 'EMA',
-            data: emaSeries,
-            borderColor: '#eab308',
-            borderWidth: 1.5,
-            borderDash: [5, 5],
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 0
+    const emaColors = ['#eab308', '#f97316', '#8b5cf6'];
+    
+    if (emaData && emaData.length > 0) {
+        emaData.forEach((ema, idx) => {
+            datasets.push({
+                label: `EMA${ema.period}`,
+                data: ema.series,
+                borderColor: emaColors[idx % emaColors.length],
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 0
+            });
         });
     }
 
