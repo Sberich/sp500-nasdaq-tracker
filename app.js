@@ -335,6 +335,22 @@ function openDetail(symbol) {
     favBtn.classList.toggle('is-fav', isFav);
     favBtn.innerHTML = isFav ? '<i class="ri-star-fill"></i>' : '<i class="ri-star-line"></i>';
     
+    // Populate Technical Action Center Stats (RSI, S1, R1)
+    const formatPct = (price, level) => {
+        if (!price || !level) return '';
+        const pct = ((level - price) / price) * 100;
+        return ` <span style="font-size:11px;color:var(--${pct>=0?'green':'red'})">(${pct>0?'+':''}${pct.toFixed(2)}%)</span>`;
+    };
+
+    let rsiColor = 'var(--text-main)';
+    if (stock.rsi > 70) rsiColor = 'var(--red)';
+    else if (stock.rsi < 30) rsiColor = 'var(--green)';
+    else if (stock.rsi) rsiColor = 'var(--yellow)';
+
+    document.getElementById('d-rsi').innerHTML = stock.rsi ? `<span style="color:${rsiColor}">${stock.rsi.toFixed(2)}</span>` : '—';
+    document.getElementById('d-s1').innerHTML = stock.s1 ? `$${stock.s1.toFixed(2)}${formatPct(stock.price, stock.s1)}` : '—';
+    document.getElementById('d-r1').innerHTML = stock.r1 ? `$${stock.r1.toFixed(2)}${formatPct(stock.price, stock.r1)}` : '—';
+    
     // Reset Data areas
     document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na"><div class="spinner-small"></div> กำลังคำนวณข้อมูล...</span>';
     document.getElementById('levels-list').innerHTML = '<div class="loader-container"><div class="spinner"></div><p>กำลังวิเคราะห์แนวรับ-ต้าน...</p></div>';
@@ -473,21 +489,6 @@ async function loadChartData() {
                     document.getElementById('d-52w-high').textContent = `—`;
                     document.getElementById('d-52w-marker').style.left = `50%`;
                 }
-
-                const dayHigh = data.quote.dayHigh;
-                if (dayHigh) {
-                    document.getElementById('d-dayhigh').textContent = `$${dayHigh.toFixed(2)}`;
-                } else { document.getElementById('d-dayhigh').textContent = '—'; }
-
-                const dayLow = data.quote.dayLow;
-                if (dayLow) {
-                    document.getElementById('d-daylow').textContent = `$${dayLow.toFixed(2)}`;
-                } else { document.getElementById('d-daylow').textContent = '—'; }
-
-                const vol = data.quote.volume;
-                if (vol) {
-                    document.getElementById('d-vol').textContent = (vol >= 1e6) ? `${(vol / 1e6).toFixed(2)}M` : (vol >= 1e3) ? `${(vol / 1e3).toFixed(1)}K` : vol;
-                } else { document.getElementById('d-vol').textContent = '—'; }
             }
             
             const emaLabels = (data.emaData || []).map(e => `EMA${e.period}`).join(', ');
