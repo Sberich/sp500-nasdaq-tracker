@@ -550,7 +550,12 @@ input {
     .panel-right.active { transform: translateX(0); }
     
     .mobile-back-btn { display: flex; margin-right: 12px; }
-    .app-header { padding: 12px 16px; }
+    .app-header { padding: 12px 16px; flex-wrap: wrap; }
+    .header-center { order: 3; width: 100%; margin-top: 16px; flex: none; }
+    .header-filters { flex-direction: column; width: 100%; gap: 12px; }
+    .mover-tabs { width: 100%; justify-content: center; }
+    .header-filters .modern-select { width: 100%; }
+    
     .detail-header { padding: 12px 16px; }
     .detail-scroll { padding: 16px; }
     .hero-card { padding: 16px; grid-template-columns: 1fr; gap: 16px; text-align: center; }
