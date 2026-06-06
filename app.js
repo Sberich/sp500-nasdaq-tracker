@@ -457,6 +457,36 @@ async function loadChartData() {
                 el.textContent = `${sign}${chg.toFixed(2)} (${sign}${pct.toFixed(2)}%)`;
                 el.className = 'price-change mono ' + (chg >= 0 ? 'up' : 'down');
             }
+
+            // Update Quote Stats
+            if (data.quote) {
+                const low = data.quote.fiftyTwoWeekLow;
+                const high = data.quote.fiftyTwoWeekHigh;
+                if (low && high && data.currentPrice) {
+                    document.getElementById('d-52w-low').textContent = `$${low.toFixed(2)}`;
+                    document.getElementById('d-52w-high').textContent = `$${high.toFixed(2)}`;
+                    let pct = ((data.currentPrice - low) / (high - low)) * 100;
+                    pct = Math.max(0, Math.min(100, pct));
+                    document.getElementById('d-52w-marker').style.left = `${pct}%`;
+                } else {
+                    document.getElementById('d-52w-low').textContent = `—`;
+                    document.getElementById('d-52w-high').textContent = `—`;
+                    document.getElementById('d-52w-marker').style.left = `50%`;
+                }
+
+                const mcap = data.quote.marketCap;
+                if (mcap) {
+                    document.getElementById('d-mcap').textContent = (mcap >= 1e12) ? `$${(mcap / 1e12).toFixed(2)}T` : (mcap >= 1e9) ? `$${(mcap / 1e9).toFixed(2)}B` : (mcap >= 1e6) ? `$${(mcap / 1e6).toFixed(2)}M` : `$${mcap}`;
+                } else { document.getElementById('d-mcap').textContent = '—'; }
+
+                const pe = data.quote.trailingPE;
+                document.getElementById('d-pe').textContent = pe ? pe.toFixed(2) : '—';
+
+                const vol = data.quote.volume;
+                if (vol) {
+                    document.getElementById('d-vol').textContent = (vol >= 1e6) ? `${(vol / 1e6).toFixed(2)}M` : (vol >= 1e3) ? `${(vol / 1e3).toFixed(1)}K` : vol;
+                } else { document.getElementById('d-vol').textContent = '—'; }
+            }
             
             const emaLabels = (data.emaData || []).map(e => `EMA${e.period}`).join(', ');
             document.getElementById('ema-label').textContent = emaLabels || 'EMA';

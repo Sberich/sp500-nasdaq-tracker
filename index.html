@@ -120,16 +120,50 @@
                     <div class="detail-scroll">
                         <!-- Hero Price Info -->
                         <div class="hero-card glass">
-                            <p class="company-name" id="d-fullname">Apple Inc.</p>
-                            <p class="sector-name" id="d-sector">Technology</p>
-                            
-                            <div class="price-row">
-                                <h1 class="mono" id="d-price">$0.00</h1>
-                                <div class="price-change" id="d-change">+0.00 (+0.00%)</div>
+                            <div class="hero-left">
+                                <p class="company-name" id="d-fullname">Apple Inc.</p>
+                                <p class="sector-name" id="d-sector">Technology</p>
+                                
+                                <div class="price-row">
+                                    <h1 class="mono" id="d-price">$0.00</h1>
+                                    <div class="price-change" id="d-change">+0.00 (+0.00%)</div>
+                                </div>
+                                
+                                <div class="trend-container" id="trend-badge-wrap">
+                                    <!-- Trend badge here -->
+                                </div>
                             </div>
-                            
-                            <div class="trend-container" id="trend-badge-wrap">
-                                <!-- Trend badge here -->
+
+                            <div class="hero-center">
+                                <div class="range-52w">
+                                    <div class="range-header">
+                                        <span class="range-label">52-Week Range</span>
+                                    </div>
+                                    <div class="range-bar-container">
+                                        <span class="range-min" id="d-52w-low">$0.00</span>
+                                        <div class="range-bar">
+                                            <div class="range-marker" id="d-52w-marker"></div>
+                                        </div>
+                                        <span class="range-max" id="d-52w-high">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="hero-right">
+                                <div class="stat-grid">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Market Cap</span>
+                                        <span class="stat-value mono" id="d-mcap">—</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">P/E Ratio</span>
+                                        <span class="stat-value mono" id="d-pe">—</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Volume</span>
+                                        <span class="stat-value mono" id="d-vol">—</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
