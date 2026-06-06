@@ -618,7 +618,7 @@ function renderChart(points, emaData, livePrice) {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: textColor, maxTicksLimit: 6, font: { size: 11 } }
+                    ticks: { color: textColor, maxTicksLimit: 6, font: { size: 11 }, align: 'inner' }
                 },
                 y: {
                     position: 'right',
