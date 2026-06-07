@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th" data-theme="dark">
 <head>
     <meta charset="UTF-8">
@@ -96,6 +96,11 @@
                             <div class="spinner"></div>
                             <p>กำลังเชื่อมต่อข้อมูล...</p>
                         </div>
+
+                        <!-- Company Description -->
+                        <div class="about-card glass" id="d-company-desc" style="display:none; margin-top: 16px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                        </div>
+
                     </div>
                 </div>
             </section>
@@ -127,10 +132,7 @@
                         <!-- Hero Price Info -->
                         <div class="hero-card glass">
                             <div class="hero-left">
-                                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px;">
-                                    <p class="company-name" id="d-fullname" style="margin: 0;">Apple Inc.</p>
-                                    <div id="d-analyst-badge"></div>
-                                </div>
+                                <p class="company-name" id="d-fullname" style="margin-bottom: 4px;">Apple Inc.</p>
                                 <p class="sector-name" id="d-sector">Technology</p>
                                 
                                 <div class="price-row">
@@ -148,9 +150,7 @@
                                 </div>
                             </div>
 
-                            <div class="hero-center">
-                                <!-- ว่างไว้ก่อนตามที่รีเควสครับ -->
-                            </div>
+                            <div class="hero-center" style="display: flex; justify-content: center; align-items: center; padding: 16px 0;"><div id="d-analyst-badge"></div></div>
 
                             <div class="hero-right-col">
                                 <div class="ranges-container">
@@ -252,6 +252,10 @@
                             </div>
                         </div>
 
+                        <!-- Company Description -->
+                        <div class="about-card glass" id="d-company-desc" style="display:none; margin-top: 16px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                        </div>
+
                     </div>
                 </div>
             </section>
@@ -275,3 +279,7 @@
     <script src="app.js"></script>
 </body>
 </html>
+
+
+
+
