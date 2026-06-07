@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AlphaZone S&P500 NQ100</title>
+    <title>AlphaZone</title>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -35,8 +35,8 @@
                     <i class="ri-pulse-line"></i>
                 </div>
                 <div>
-                    <h1 style="display:flex; align-items:center; gap:12px;">AlphaZone</h1>
-                    <p class="subtitle"> </p>
+                    <h1 style="display:flex; align-items:center; gap:8px;">AlphaZone</h1>
+                    <p class="subtitle">S&P500 & NASDAQ100 Analysis</p>
                 </div>
             </div>
             <div class="header-center">
@@ -52,7 +52,13 @@
                     </select>
                 </div>
             </div>
-            
+            <div class="header-search">
+                <div class="search-box" style="margin-bottom: 0;">
+                    <i class="ri-search-line"></i>
+                    <input type="text" id="search-input" placeholder="ค้นหา Symbol หรือชื่อบริษัท..." autocomplete="off">
+                </div>
+            </div>
+
             <div class="header-right">
                 <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
                     <i class="ri-moon-fill"></i>
@@ -66,11 +72,6 @@
             <!-- Left Panel: List & Filters -->
             <section class="panel-left" id="list-panel">
                 <div class="filters-container glass">
-                    <div class="search-box">
-                        <i class="ri-search-line"></i>
-                        <input type="text" id="search-input" placeholder="ค้นหา Symbol หรือชื่อบริษัท...">
-                    </div>
-                    
                     <div class="filter-group">
                         <div class="filter-label">MARKETS</div>
                         <div class="filter-tabs">

@@ -144,8 +144,14 @@ input {
     box-shadow: var(--shadow-md);
 }
 
-.app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+.app-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
 .app-header .subtitle { font-size: 12px; color: var(--text-muted); }
+
+.header-search {
+    flex: 1;
+    max-width: 320px;
+    margin: 0 24px;
+}
 
 .icon-btn {
     width: 36px; height: 36px;
@@ -551,7 +557,10 @@ input {
     
     .mobile-back-btn { display: flex; margin-right: 12px; }
     .app-header { padding: 12px 16px; flex-wrap: wrap; }
-    .header-center { order: 3; width: 100%; margin-top: 16px; flex: none; }
+    .header-left, .header-right { flex: 0 0 auto; }
+    .header-search { order: 2; flex: 1; margin: 0 8px; max-width: none; }
+    .header-search input { padding: 8px 12px 8px 32px; font-size: 13px; }
+    .header-center { order: 4; width: 100%; margin-top: 16px; flex: none; }
     .header-filters { flex-direction: column; width: 100%; gap: 12px; }
     .mover-tabs { width: 100%; justify-content: center; }
     .header-filters .modern-select { width: 100%; }
