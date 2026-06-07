@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     /* Light Theme */
     --bg: #f8fafc;
     --panel-bg: rgba(255, 255, 255, 0.7);
@@ -119,31 +119,43 @@ input {
 }
 
 
-/* Market Status Indicator */
-.market-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+/* Index Ticker Card */
+.index-ticker-card {
+    padding: 8px 14px;
     background: var(--card-bg);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 12px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 220px;
+}
+.itc-name {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
     font-weight: 600;
-    white-space: nowrap;
 }
-.status-dot {
-    width: 8px;
-    height: 8px;
-    background-color: var(--green);
-    border-radius: 50%;
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse-dot 2s infinite;
+.itc-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 2px;
 }
-@keyframes pulse-dot {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+.itc-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.itc-change {
+    font-size: 13px;
+    font-weight: 600;
+}
+.itc-change.pos { color: var(--green); }
+.itc-change.neg { color: var(--red); }
+.itc-time {
+    font-size: 10px;
+    color: var(--text-muted);
 }
 
 .header-filters {
@@ -640,6 +652,7 @@ input {
     .chart-card { margin: 0 -16px; padding: 16px 2px; border-radius: 0; border-left: none; border-right: none; }
     .chart-header { padding: 0 12px; }
 }
+
 
 
 

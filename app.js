@@ -1,4 +1,4 @@
-﻿// --- Constants & State ---
+// --- Constants & State ---
 let API_URL = localStorage.getItem('SP_API_URL') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
 let allStocks = [];
 let favorites = JSON.parse(localStorage.getItem('SP_FAVS') || '[]');
@@ -869,4 +869,48 @@ function updateMarketStatus() {
 }
 setInterval(updateMarketStatus, 60000);
 updateMarketStatus();
+
+
+// Fetch Market Index Data
+async function fetchMarketIndex() {
+    try {
+        const url = SCRIPT_URL + '?action=getMarketIndex';
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.price) {
+            const data = result.data;
+            const statusEl = document.getElementById('market-status-badge');
+            if (statusEl) {
+                // Determine color based on % change
+                const pct = parseFloat(data.changePct);
+                const color = pct >= 0 ? 'var(--green)' : 'var(--red)';
+                const sign = pct >= 0 ? '+' : '';
+                
+                                // Format the timestamp
+                const dateObj = new Date(data.marketTime * 1000);
+                const options = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short' };
+                const timeStr = dateObj.toLocaleDateString('en-US', options);
+                
+                const formatPrice = parseFloat(data.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const posClass = pct >= 0 ? 'pos' : 'neg';
+
+                statusEl.innerHTML = `
+                    <div class="itc-name">S&P 500 (^GSPC)</div>
+                    <div class="itc-price-row">
+                        <span class="itc-price">${formatPrice}</span>
+                        <span class="itc-change ${posClass}">${sign}${data.change} (${sign}${data.changePct}%)</span>
+                    </div>
+                    <div class="itc-time">At close: ${timeStr}</div>
+                `;
+            }
+        }
+    } catch (err) {
+        console.error("Failed to fetch market index:", err);
+    }
+}
+
+// Call it once when the app loads
+setTimeout(fetchMarketIndex, 2000);
+
 
