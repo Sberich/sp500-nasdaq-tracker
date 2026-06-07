@@ -838,3 +838,20 @@ function formatVolume(vol) {
 
 
 
+
+// Visitor Count (GPF1 logic)
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('https://api.counterapi.dev/v1/alphazone_dashboard/visits/up')
+        .then(res => res.json())
+        .then(data => {
+            let count = data.count || 1;
+            let v = Math.floor(count / 10000) + 1;
+            let rem = (count % 10000).toString().padStart(4, '0');
+            const el = document.getElementById('global-visit-count');
+            if (el) el.textContent = `v$v.$rem`;
+        })
+        .catch(err => {
+            const el = document.getElementById('global-visit-count');
+            if (el) el.textContent = `v1.0001`;
+        });
+});
