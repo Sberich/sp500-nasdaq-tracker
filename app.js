@@ -1,4 +1,4 @@
-﻿// --- Constants & State ---
+// --- Constants & State ---
 let API_URL = localStorage.getItem('SP_API_URL') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
 let allStocks = [];
 let favorites = JSON.parse(localStorage.getItem('SP_FAVS') || '[]');
@@ -196,7 +196,7 @@ function buildSectorTabs() {
     const filtered = allStocks.filter(s => {
         if (currentIndex === 'all') return true;
         const angels = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'];
-          if (currentIndex === 'ANGLE') return angels.includes(s.symbol);
+          if (currentIndex === '7MAG') return angels.includes(s.symbol);
           if (currentIndex === 'S&P500') return s.index === 'S&P500' || s.index === 'Both';
           if (currentIndex === 'NASDAQ100') return s.index === 'NASDAQ100' || s.index === 'Both';
           return s.index === currentIndex;
@@ -220,10 +220,10 @@ function renderList() {
         if (currentIndex === 'fav') return favorites.includes(s.symbol);
         if (currentIndex === 'watch') return watchlist.includes(s.symbol);
         const angels = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'];
-          if (currentIndex === 'ANGLE' && !angels.includes(s.symbol)) return false;
+          if (currentIndex === '7MAG' && !angels.includes(s.symbol)) return false;
           if (currentIndex === 'S&P500' && s.index !== 'S&P500' && s.index !== 'Both') return false;
           if (currentIndex === 'NASDAQ100' && s.index !== 'NASDAQ100' && s.index !== 'Both') return false;
-          if (currentIndex !== 'all' && currentIndex !== 'ANGLE' && currentIndex !== 'S&P500' && currentIndex !== 'NASDAQ100' && s.index !== currentIndex) return false;
+          if (currentIndex !== 'all' && currentIndex !== '7MAG' && currentIndex !== 'S&P500' && currentIndex !== 'NASDAQ100' && s.index !== currentIndex) return false;
         if (currentSector !== 'ทั้งหมด' && s.sector !== currentSector) return false;
         if (query) return s.symbol.includes(query) || (s.name || '').toUpperCase().includes(query);
         return true;
