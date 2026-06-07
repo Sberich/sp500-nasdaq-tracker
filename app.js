@@ -195,7 +195,9 @@ function showErrorList(msg) {
 function buildSectorTabs() {
     const filtered = allStocks.filter(s => {
         if (currentIndex === 'all') return true;
-        if (currentIndex === 'S&P500') return s.index === 'S&P500' || s.index === 'Both';
+        const angels = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'];
+          if (currentIndex === 'ANGLE') return angels.includes(s.symbol);
+          if (currentIndex === 'S&P500') return s.index === 'S&P500' || s.index === 'Both';
           if (currentIndex === 'NASDAQ100') return s.index === 'NASDAQ100' || s.index === 'Both';
           return s.index === currentIndex;
     });
@@ -217,9 +219,11 @@ function renderList() {
     let stocks = allStocks.filter(s => {
         if (currentIndex === 'fav') return favorites.includes(s.symbol);
         if (currentIndex === 'watch') return watchlist.includes(s.symbol);
-        if (currentIndex === 'S&P500' && s.index !== 'S&P500' && s.index !== 'Both') return false;
+        const angels = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'];
+          if (currentIndex === 'ANGLE' && !angels.includes(s.symbol)) return false;
+          if (currentIndex === 'S&P500' && s.index !== 'S&P500' && s.index !== 'Both') return false;
           if (currentIndex === 'NASDAQ100' && s.index !== 'NASDAQ100' && s.index !== 'Both') return false;
-          if (currentIndex !== 'all' && currentIndex !== 'S&P500' && currentIndex !== 'NASDAQ100' && s.index !== currentIndex) return false;
+          if (currentIndex !== 'all' && currentIndex !== 'ANGLE' && currentIndex !== 'S&P500' && currentIndex !== 'NASDAQ100' && s.index !== currentIndex) return false;
         if (currentSector !== 'ทั้งหมด' && s.sector !== currentSector) return false;
         if (query) return s.symbol.includes(query) || (s.name || '').toUpperCase().includes(query);
         return true;
@@ -830,5 +834,6 @@ function formatVolume(vol) {
     if (vol >= 1e3) return (vol / 1e3).toFixed(0) + 'K';
     return vol.toString();
 }
+
 
 
