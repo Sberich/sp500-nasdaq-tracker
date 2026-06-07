@@ -290,9 +290,9 @@ input {
 }
 
 .filter-group {
-    padding-bottom: 12px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--border);
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+    border-bottom: none;
 }
 
 .filter-label {
