@@ -31,7 +31,7 @@
         <!-- Header -->
         <header class="app-header glass">
             <div class="header-left">
-                <div class="logo-box" style="background:var(--blue); color:white; cursor:pointer;" onclick="openAbout()">
+                <div class="logo-box" style="background:var(--blue); color:white;">
                     <i class="ri-pulse-line"></i>
                 </div>
                 <div>
@@ -299,40 +299,5 @@
     </div>
 
     <script src="app.js"></script>
-
-
-<!-- About Modal -->
-<div id="about-modal">
-  <div class="about-box">
-    <div class="about-header">
-      <div style="flex:1;"></div>
-      <button class="about-close" onclick="closeAbout()"><i class="ri-close-line"></i></button>
-    </div>
-    <div class="about-body">
-      <div class="about-logo">
-          <i class="ri-pulse-line"></i>
-      </div>
-      <div class="about-title">AlphaZone Dashboard</div>
-      <div class="about-version">v1.0001</div>
-      <div class="about-dev">Developed by <span>KⓇU M00 ¥EO</span></div>
-    </div>
-  </div>
-</div>
-<script>
-function openAbout() { document.getElementById('about-modal').classList.add('open'); }
-function closeAbout() { document.getElementById('about-modal').classList.remove('open'); }
-document.getElementById('about-modal').addEventListener('click', function(e) { if (e.target === this) closeAbout(); });
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAbout(); });
-</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
