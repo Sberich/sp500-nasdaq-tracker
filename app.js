@@ -848,7 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let v = Math.floor(count / 10000) + 1;
             let rem = (count % 10000).toString().padStart(4, '0');
             const el = document.getElementById('global-visit-count');
-            if (el) el.textContent = `v$v.$rem`;
+            if (el) el.textContent = `v${v}.${rem}`;
         })
         .catch(err => {
             const el = document.getElementById('global-visit-count');
