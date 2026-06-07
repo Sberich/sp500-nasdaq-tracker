@@ -40,15 +40,20 @@
             </div>
             <div class="header-center">
                 <div class="header-filters">
-                    <div class="movers-row" style="display:flex; justify-content:center; align-items:center; gap:12px; width:100%; flex-wrap:wrap;">
-                        <div class="index-ticker-card" id="index-ticker-card">
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">S&P 500 (^GSPC) <i class="ri-loader-4-line ri-spin"></i></div>
+                    <div class="market-index-widget" id="market-index-widget">
+                        <div class="index-label" style="display:flex; align-items:center; gap:4px;">
+                            S&P 500 (^GSPC) 
+                            <button class="icon-btn" id="btn-refresh-idx" style="padding:2px; color:var(--text-muted);"><i class="ri-refresh-line"></i></button>
                         </div>
-                        <div class="filter-tabs mover-tabs">
-                            <button class="tab-btn mover-btn" data-mover="day_gainers"><i class="ri-rocket-2-line"></i> Gainers</button>
-                            <button class="tab-btn mover-btn" data-mover="day_losers"><i class="ri-arrow-down-circle-line"></i> Losers</button>
-                            <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
+                        <div class="index-values">
+                            <span class="index-price" id="idx-price">--</span>
+                            <span class="index-change" id="idx-change">-- (--)</span>
                         </div>
+                    </div>
+                    <div class="filter-tabs mover-tabs">
+                        <button class="tab-btn mover-btn" data-mover="day_gainers"><i class="ri-rocket-2-line"></i> Gainers</button>
+                        <button class="tab-btn mover-btn" data-mover="day_losers"><i class="ri-arrow-down-circle-line"></i> Losers</button>
+                        <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
                     </div>
                     <select id="sector-select" class="modern-select">
                         <option value="ทั้งหมด">All Sectors (ทั้งหมด)</option>

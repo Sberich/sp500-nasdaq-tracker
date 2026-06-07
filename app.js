@@ -1,4 +1,4 @@
-// --- Constants & State ---
+﻿// --- Constants & State ---
 let API_URL = localStorage.getItem('SP_API_URL') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
 let allStocks = [];
 let favorites = JSON.parse(localStorage.getItem('SP_FAVS') || '[]');
@@ -835,42 +835,6 @@ function formatVolume(vol) {
     return vol.toString();
 }
 
-
-
-
-// US Market Status Check
-function updateMarketStatus() {
-    const now = new Date();
-    // Get current time in New York (ET)
-    const options = { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', second: 'numeric', weekday: 'short', hour12: false };
-    const formatter = new Intl.DateTimeFormat('en-US', options);
-    const parts = formatter.formatToParts(now);
-    
-    let hour = 0, minute = 0, weekday = '';
-    parts.forEach(p => {
-        if (p.type === 'hour') hour = parseInt(p.value);
-        if (p.type === 'minute') minute = parseInt(p.value);
-        if (p.type === 'weekday') weekday = p.value;
-    });
-
-    const isWeekend = weekday === 'Sat' || weekday === 'Sun';
-    const currentTime = hour + minute / 60;
-    // Market hours: 9:30 AM (9.5) to 4:00 PM (16.0) ET
-    const isOpen = !isWeekend && currentTime >= 9.5 && currentTime < 16.0;
-
-    const statusEl = document.getElementById('market-status-badge');
-    if (!statusEl) return;
-    
-    if (isOpen) {
-        statusEl.innerHTML = '<span class="status-dot"></span><span class="status-text" style="color:var(--text-main);">Market Open</span>';
-    } else {
-        statusEl.innerHTML = '<span class="status-dot" style="background-color:var(--text-muted); box-shadow:none; animation:none;"></span><span class="status-text" style="color:var(--text-muted);">Market Closed</span>';
-    }
-}
-setInterval(updateMarketStatus, 60000);
-updateMarketStatus();
-
-
 // Fetch Market Index Data
 async function fetchMarketIndex() {
     try {
@@ -880,29 +844,18 @@ async function fetchMarketIndex() {
         
         if (result.success && result.data && result.data.price) {
             const data = result.data;
-            const statusEl = document.getElementById('market-status-badge');
-            if (statusEl) {
-                // Determine color based on % change
+            const priceEl = document.getElementById('idx-price');
+            const changeEl = document.getElementById('idx-change');
+            
+            if (priceEl && changeEl) {
                 const pct = parseFloat(data.changePct);
-                const color = pct >= 0 ? 'var(--green)' : 'var(--red)';
                 const sign = pct >= 0 ? '+' : '';
-                
-                                // Format the timestamp
-                const dateObj = new Date(data.marketTime * 1000);
-                const options = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short' };
-                const timeStr = dateObj.toLocaleDateString('en-US', options);
-                
                 const formatPrice = parseFloat(data.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                const posClass = pct >= 0 ? 'pos' : 'neg';
-
-                statusEl.innerHTML = `
-                    <div class="itc-name">S&P 500 (^GSPC)</div>
-                    <div class="itc-price-row">
-                        <span class="itc-price">${formatPrice}</span>
-                        <span class="itc-change ${posClass}">${sign}${data.change} (${sign}${data.changePct}%)</span>
-                    </div>
-                    <div class="itc-time">At close: ${timeStr}</div>
-                `;
+                
+                priceEl.textContent = formatPrice;
+                changeEl.textContent = sign + data.change + " (" + sign + data.changePct + "%)";
+                
+                changeEl.className = 'index-change ' + (pct >= 0 ? 'positive' : 'negative');
             }
         }
     } catch (err) {
@@ -911,6 +864,16 @@ async function fetchMarketIndex() {
 }
 
 // Call it once when the app loads
-setTimeout(fetchMarketIndex, 2000);
+setTimeout(fetchMarketIndex, 1000);
 
-
+// Add event listener for the refresh button
+document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('btn-refresh-idx');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            const priceEl = document.getElementById('idx-price');
+            if(priceEl) priceEl.textContent = "Updating...";
+            fetchMarketIndex();
+        });
+    }
+});
