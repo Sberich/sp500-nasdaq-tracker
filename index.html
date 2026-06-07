@@ -40,14 +40,16 @@
             </div>
             <div class="header-center">
                 <div class="header-filters">
-                    <div class="market-status">
-                        <span class="status-dot"></span>
-                        <span class="status-text">Market Live</span>
-                    </div>
-                    <div class="filter-tabs mover-tabs">
-                        <button class="tab-btn mover-btn" data-mover="day_gainers"><i class="ri-rocket-2-line"></i> Gainers</button>
-                        <button class="tab-btn mover-btn" data-mover="day_losers"><i class="ri-arrow-down-circle-line"></i> Losers</button>
-                        <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
+                    <div class="movers-row" style="display:flex; justify-content:center; align-items:center; gap:12px; width:100%; flex-wrap:wrap;">
+                        <div class="market-status" id="market-status-badge">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Market Live</span>
+                        </div>
+                        <div class="filter-tabs mover-tabs">
+                            <button class="tab-btn mover-btn" data-mover="day_gainers"><i class="ri-rocket-2-line"></i> Gainers</button>
+                            <button class="tab-btn mover-btn" data-mover="day_losers"><i class="ri-arrow-down-circle-line"></i> Losers</button>
+                            <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
+                        </div>
                     </div>
                     <select id="sector-select" class="modern-select">
                         <option value="ทั้งหมด">All Sectors (ทั้งหมด)</option>
@@ -283,6 +285,7 @@
     <script src="app.js"></script>
 </body>
 </html>
+
 
 
 

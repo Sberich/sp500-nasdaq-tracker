@@ -837,3 +837,36 @@ function formatVolume(vol) {
 
 
 
+
+// US Market Status Check
+function updateMarketStatus() {
+    const now = new Date();
+    // Get current time in New York (ET)
+    const options = { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', second: 'numeric', weekday: 'short', hour12: false };
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    const parts = formatter.formatToParts(now);
+    
+    let hour = 0, minute = 0, weekday = '';
+    parts.forEach(p => {
+        if (p.type === 'hour') hour = parseInt(p.value);
+        if (p.type === 'minute') minute = parseInt(p.value);
+        if (p.type === 'weekday') weekday = p.value;
+    });
+
+    const isWeekend = weekday === 'Sat' || weekday === 'Sun';
+    const currentTime = hour + minute / 60;
+    // Market hours: 9:30 AM (9.5) to 4:00 PM (16.0) ET
+    const isOpen = !isWeekend && currentTime >= 9.5 && currentTime < 16.0;
+
+    const statusEl = document.getElementById('market-status-badge');
+    if (!statusEl) return;
+    
+    if (isOpen) {
+        statusEl.innerHTML = '<span class="status-dot"></span><span class="status-text" style="color:var(--text-main);">Market Open</span>';
+    } else {
+        statusEl.innerHTML = '<span class="status-dot" style="background-color:var(--text-muted); box-shadow:none; animation:none;"></span><span class="status-text" style="color:var(--text-muted);">Market Closed</span>';
+    }
+}
+setInterval(updateMarketStatus, 60000);
+updateMarketStatus();
+
