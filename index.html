@@ -96,11 +96,6 @@
                             <div class="spinner"></div>
                             <p>กำลังเชื่อมต่อข้อมูล...</p>
                         </div>
-
-                        <!-- Company Description -->
-                        <div class="about-card glass" id="d-company-desc" style="display:none; margin-top: 16px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
-                        </div>
-
                     </div>
                 </div>
             </section>
@@ -150,7 +145,7 @@
                                 </div>
                             </div>
 
-                            <div class="hero-center" style="display: flex; justify-content: center; align-items: center; padding: 16px 0;"><div id="d-analyst-badge"></div></div>
+                            <div class="hero-center" style="display: flex; justify-content: center; align-items: center; padding: 4px 0;"><div id="d-analyst-badge"></div></div>
 
                             <div class="hero-right-col">
                                 <div class="ranges-container">
@@ -228,7 +223,7 @@
                         <div class="levels-card glass">
                             <div class="card-title">
                                 <h3><i class="ri-flashlight-line"></i> แนวรับ-แนวต้าน (ระยะ >3%)</h3>
-                                <span class="calc-time" id="calc-time"></span>
+                                
                             </div>
                             
                             <div class="levels-list" id="levels-list">
@@ -239,7 +234,6 @@
                             </div>
                         </div>
 
-                        <div style="text-align: right; margin-bottom: 12px; font-size: 12px; color: var(--text-muted);" id="d-update-container"><span id="d-update">อัปเดต: -</span></div>
                         <div class="legend-card glass">
                             <p class="legend-title"><i class="ri-information-line"></i> อัลกอริทึมการคำนวณคะแนน</p>
                             <div class="tags-container">
@@ -254,6 +248,11 @@
 
                         <!-- Company Description -->
                         <div class="about-card glass" id="d-company-desc" style="display:none; margin-top: 16px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                        </div>
+
+                        <!-- Update Time (Moved to Bottom) -->
+                        <div style="text-align: right; margin-top: 16px;">
+                            <span class="update-time" id="calc-time" style="display: inline-block; font-size: 11px; color: var(--text-muted); font-weight: 500;">อัปเดต: -</span>
                         </div>
 
                     </div>
@@ -279,9 +278,4 @@
     <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-
 
