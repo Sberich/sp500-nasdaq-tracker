@@ -835,45 +835,4 @@ function formatVolume(vol) {
     return vol.toString();
 }
 
-// Fetch Market Index Data
-async function fetchMarketIndex() {
-    try {
-        const url = SCRIPT_URL + '?action=getMarketIndex';
-        const response = await fetch(url);
-        const result = await response.json();
-        
-        if (result.success && result.data && result.data.price) {
-            const data = result.data;
-            const priceEl = document.getElementById('idx-price');
-            const changeEl = document.getElementById('idx-change');
-            
-            if (priceEl && changeEl) {
-                const pct = parseFloat(data.changePct);
-                const sign = pct >= 0 ? '+' : '';
-                const formatPrice = parseFloat(data.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                
-                priceEl.textContent = formatPrice;
-                changeEl.textContent = sign + data.change + " (" + sign + data.changePct + "%)";
-                
-                changeEl.className = 'index-change ' + (pct >= 0 ? 'positive' : 'negative');
-            }
-        }
-    } catch (err) {
-        console.error("Failed to fetch market index:", err);
-    }
-}
 
-// Call it once when the app loads
-setTimeout(fetchMarketIndex, 1000);
-
-// Add event listener for the refresh button
-document.addEventListener('DOMContentLoaded', () => {
-    const refreshBtn = document.getElementById('btn-refresh-idx');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            const priceEl = document.getElementById('idx-price');
-            if(priceEl) priceEl.textContent = "Updating...";
-            fetchMarketIndex();
-        });
-    }
-});
