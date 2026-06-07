@@ -697,7 +697,7 @@ function renderChart(points, emaData, livePrice) {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { display: !hideTicks, color: textColor, maxTicksLimit: 6, font: { size: 11 }, align: 'inner' }
+                    ticks: { display: !hideTicks, color: textColor, maxTicksLimit: 6, font: { size: 11 }, align: 'inner' }, bounds: 'data', offset: false
                 },
                 y: {
                     position: 'right',
@@ -834,6 +834,7 @@ function formatVolume(vol) {
     if (vol >= 1e3) return (vol / 1e3).toFixed(0) + 'K';
     return vol.toString();
 }
+
 
 
 
