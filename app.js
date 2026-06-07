@@ -410,6 +410,9 @@ async function loadLiveLevels() {
         if (data.success) {
             currentLevelsData = data;
             renderLiveLevels(data);
+            if (data.summary) {
+                renderSummary(data.summary);
+            }
             addChartAnnotations();
         } else {
             document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-error-warning-line"></i> ${data.error}</p>`;
@@ -491,6 +494,31 @@ function createLevelRow(type, label, lvl, price) {
             <div class="lr-pct ${type}">${pctStr}</div>
         </div>
     </div>`;
+}
+
+function renderSummary(summary) {
+    if (!summary) return;
+    
+    // Analyst Rating Badge
+    const badgeWrap = document.getElementById('d-analyst-badge');
+    if (summary.rating && badgeWrap) {
+        const r = summary.rating.replace(/_/g, ' ').toUpperCase();
+        let colorClass = 'rating-hold';
+        if (r.includes('BUY')) colorClass = 'rating-buy';
+        if (r.includes('SELL')) colorClass = 'rating-sell';
+        badgeWrap.innerHTML = `<span class="rating-badge ${colorClass}">${r}</span>`;
+    } else if (badgeWrap) {
+        badgeWrap.innerHTML = '';
+    }
+
+    // Company Description
+    const descBox = document.getElementById('d-company-desc');
+    if (summary.desc && descBox) {
+        descBox.innerHTML = `<h3><i class="ri-building-4-line"></i> About Company</h3><p>${summary.desc}</p>`;
+        descBox.style.display = 'block';
+    } else if (descBox) {
+        descBox.style.display = 'none';
+    }
 }
 
 // --- Chart ---
