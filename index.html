@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AlphaZone</title>
+    <title>AlphaZone - S&P500 & NASDAQ100 Analysis</title>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -36,7 +36,6 @@
                 </div>
                 <div>
                     <h1 style="display:flex; align-items:center; gap:8px;">AlphaZone</h1>
-                    <p class="subtitle">S&P500 & NASDAQ100 Analysis</p>
                 </div>
             </div>
             <div class="header-center">
@@ -73,7 +72,12 @@
             <section class="panel-left" id="list-panel">
                 <div class="filters-container glass">
                     <div class="filter-group">
-                        <div class="filter-label">MARKETS</div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
+                            <div class="filter-label" style="margin-bottom:0;">MARKETS</div>
+                            <div class="stats-bar" id="stats-bar" style="padding:0;">
+                                <!-- Stats populated dynamically -->
+                            </div>
+                        </div>
                         <div class="filter-tabs">
                             <button class="tab-btn active" data-idx="all">ทั้งหมด</button>
                             <button class="tab-btn" data-idx="S&P500">S&P500</button>
@@ -81,10 +85,6 @@
                             <button class="tab-btn" data-idx="NYSE">NYSE</button>
                             <button class="tab-btn" data-idx="fav"><i class="ri-star-fill"></i> โปรด</button>
                         </div>
-                    </div>
-
-                    <div class="stats-bar" id="stats-bar">
-                        <!-- Stats populated dynamically -->
                     </div>
                 </div>
 
