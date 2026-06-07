@@ -145,7 +145,7 @@
                                 </div>
                             </div>
 
-                            <div class="hero-center" style="display: flex; justify-content: center; align-items: center; padding: 4px 0;"><div id="d-analyst-badge"></div></div>
+                            <div class="hero-center" style="display: flex; justify-content: center; align-items: flex-start; padding-top: 4px;"><div id="d-analyst-badge"></div></div>
 
                             <div class="hero-right-col">
                                 <div class="ranges-container">
@@ -234,6 +234,11 @@
                             </div>
                         </div>
 
+                        <!-- Update Time -->
+                        <div style="text-align: right; margin-top: 8px; margin-bottom: 16px; margin-right: 8px;">
+                            <span class="update-time" id="calc-time" style="display: inline-block; font-size: 11px; color: var(--text-muted); font-weight: 500;">อัปเดต: -</span>
+                        </div>
+
                         <div class="legend-card glass">
                             <p class="legend-title"><i class="ri-information-line"></i> อัลกอริทึมการคำนวณคะแนน</p>
                             <div class="tags-container">
@@ -250,12 +255,7 @@
                         <div class="about-card glass" id="d-company-desc" style="display:none; margin-top: 16px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
                         </div>
 
-                        <!-- Update Time (Moved to Bottom) -->
-                        <div style="text-align: right; margin-top: 16px;">
-                            <span class="update-time" id="calc-time" style="display: inline-block; font-size: 11px; color: var(--text-muted); font-weight: 500;">อัปเดต: -</span>
-                        </div>
-
-                    </div>
+</div>
                 </div>
             </section>
 
@@ -278,4 +278,5 @@
     <script src="app.js"></script>
 </body>
 </html>
+
 
