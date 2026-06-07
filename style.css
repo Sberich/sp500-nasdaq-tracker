@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     /* Light Theme */
     --bg: #f8fafc;
     --panel-bg: rgba(255, 255, 255, 0.7);
@@ -91,7 +91,7 @@ input {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100dvh;
     max-width: 1600px;
     margin: 0 auto;
 }
@@ -594,7 +594,7 @@ input {
     .header-search input { padding: 6px 12px 6px 32px; font-size: 13px; }
     .filters-container { padding: 8px 12px 4px; }
     .filter-group { padding-bottom: 8px; margin-bottom: 4px; border-bottom: none; }
-    .stock-list-container { padding: 4px 12px; }
+    .stock-list-container { padding: 4px 12px 64px 12px; }
     .header-center { order: 4; width: 100%; margin-top: 8px; flex: none; }
     .header-filters { flex-direction: column; width: 100%; gap: 6px; }
     .mover-tabs { width: 100%; justify-content: center; }
@@ -612,6 +612,7 @@ input {
     .chart-card { margin: 0 -16px; padding: 16px 2px; border-radius: 0; border-left: none; border-right: none; }
     .chart-header { padding: 0 12px; }
 }
+
 
 
 
