@@ -261,7 +261,7 @@ input {
 }
 
 .filters-container {
-    padding: 12px 16px 0px;
+    padding: 12px 16px 12px;
     border-bottom: none;
     z-index: 20;
 }
