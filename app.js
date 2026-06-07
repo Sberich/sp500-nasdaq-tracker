@@ -2,6 +2,7 @@
 let API_URL = localStorage.getItem('SP_API_URL') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
 let allStocks = [];
 let favorites = JSON.parse(localStorage.getItem('SP_FAVS') || '[]');
+let watchlist = JSON.parse(localStorage.getItem('SP_WATCH') || '[]');
 let currentSymbol = '';
 let currentRange = '1M';
 let currentSector = 'ทั้งหมด';
@@ -151,6 +152,20 @@ function setupEventListeners() {
         
         if (!currentMover) renderList();
     });
+
+    // Watch Button in Detail
+    document.getElementById('d-watch-btn').addEventListener('click', () => {
+        if (!currentSymbol) return;
+        toggleWatchlist(currentSymbol);
+        
+        // Update button UI
+        const isWatch = watchlist.includes(currentSymbol);
+        const btn = document.getElementById('d-watch-btn');
+        btn.classList.toggle('is-watch', isWatch);
+        btn.innerHTML = isWatch ? '<i class="ri-eye-fill"></i>' : '<i class="ri-eye-line"></i>';
+        
+        if (!currentMover) renderList();
+    });
 }
 
 // --- Data Fetching ---
@@ -199,6 +214,7 @@ function renderList() {
     
     let stocks = allStocks.filter(s => {
         if (currentIndex === 'fav') return favorites.includes(s.symbol);
+        if (currentIndex === 'watch') return watchlist.includes(s.symbol);
         if (currentIndex !== 'all' && s.index !== currentIndex && s.index !== 'Both') return false;
         if (currentSector !== 'ทั้งหมด' && s.sector !== currentSector) return false;
         if (query) return s.symbol.includes(query) || (s.name || '').toUpperCase().includes(query);
@@ -244,6 +260,14 @@ function renderList() {
             renderList();
         });
     });
+
+    document.querySelectorAll('.sc-watch').forEach(watch => {
+        watch.addEventListener('click', (e) => {
+            const sym = e.currentTarget.dataset.symbol;
+            toggleWatchlist(sym);
+            renderList();
+        });
+    });
 }
 
 function createStockCard(s) {
@@ -259,6 +283,7 @@ function createStockCard(s) {
     }
     
     const isFav = favorites.includes(s.symbol);
+    const isWatch = watchlist.includes(s.symbol);
     const logoUrl = `https://financialmodelingprep.com/image-stock/${s.symbol}.png`;
     const initials = s.symbol.substring(0, 3);
     
@@ -274,6 +299,9 @@ function createStockCard(s) {
     return `
     <div class="stock-card ${colorClass} ${currentSymbol === s.symbol ? 'active' : ''}" data-symbol="${s.symbol}">
         <div class="sc-logo-wrapper">
+            <button class="sc-watch ${isWatch ? 'is-watch' : ''}" data-symbol="${s.symbol}">
+                <i class="${isWatch ? 'ri-eye-fill' : 'ri-eye-line'}"></i>
+            </button>
             <button class="sc-star ${isFav ? 'is-fav' : ''}" data-symbol="${s.symbol}">
                 <i class="${isFav ? 'ri-star-fill' : 'ri-star-line'}"></i>
             </button>
@@ -305,6 +333,13 @@ function toggleFavorite(symbol) {
     localStorage.setItem('SP_FAVS', JSON.stringify(favorites));
 }
 
+function toggleWatchlist(symbol) {
+    const idx = watchlist.indexOf(symbol);
+    if (idx === -1) watchlist.push(symbol);
+    else watchlist.splice(idx, 1);
+    localStorage.setItem('SP_WATCH', JSON.stringify(watchlist));
+}
+
 // --- Detail View ---
 function openDetail(symbol) {
     const stock = allStocks.find(s => s.symbol === symbol);
@@ -334,6 +369,11 @@ function openDetail(symbol) {
     const favBtn = document.getElementById('d-fav-btn');
     favBtn.classList.toggle('is-fav', isFav);
     favBtn.innerHTML = isFav ? '<i class="ri-star-fill"></i>' : '<i class="ri-star-line"></i>';
+    
+    const isWatch = watchlist.includes(symbol);
+    const watchBtn = document.getElementById('d-watch-btn');
+    watchBtn.classList.toggle('is-watch', isWatch);
+    watchBtn.innerHTML = isWatch ? '<i class="ri-eye-fill"></i>' : '<i class="ri-eye-line"></i>';
     
     // Populate Technical Action Center Stats (RSI, S1, R1)
     const formatPct = (price, level) => {
