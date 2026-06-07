@@ -770,7 +770,7 @@ async function fetchMarketMovers(scrId) {
 
 function renderMoverList(data) {
     const stocks = data.data || [];
-    const titleMap = { day_gainers: '🚀 Top Gainers', day_losers: '📉 Top Losers', most_actives: '🔥 Most Active' };
+    const titleMap = { day_gainers: '🚀 Top Gainers', day_losers: '📉 Top Losers', most_actives: '🔥 Most Active', trending_now: '📈 Trending Now' };
     
     elStatsBar.innerHTML = `<span>${titleMap[data.scrId] || ''}</span> · ${stocks.length} หุ้น · อัปเดต: ${data.fetchTime || ''}`;
     
@@ -834,5 +834,6 @@ function formatVolume(vol) {
     if (vol >= 1e3) return (vol / 1e3).toFixed(0) + 'K';
     return vol.toString();
 }
+
 
 
