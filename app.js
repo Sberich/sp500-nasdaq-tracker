@@ -564,6 +564,36 @@ function renderSummary(summary) {
     } else if (descBox) {
         descBox.style.display = 'none';
     }
+    
+    // Fundamentals
+    const fundBox = document.getElementById('d-fundamentals');
+    if (summary.fundamentals && fundBox) {
+        const f = summary.fundamentals;
+        const upsideColor = f.upsideRaw > 0 ? 'text-green' : (f.upsideRaw < 0 ? 'text-red' : '');
+        fundBox.innerHTML = `
+            <div class="fund-card glass">
+                <div class="fund-card-title"><i class="ri-pie-chart-2-line"></i> Valuation</div>
+                <div class="fund-row"><span>P/E Ratio</span><strong>${f.trailingPE}</strong></div>
+                <div class="fund-row"><span>Market Cap</span><strong>${f.marketCap}</strong></div>
+                <div class="fund-row"><span>Div Yield</span><strong>${f.dividendYield}</strong></div>
+            </div>
+            <div class="fund-card glass">
+                <div class="fund-card-title"><i class="ri-focus-2-line"></i> Analyst Target</div>
+                <div class="fund-row"><span>Rating</span><strong>${summary.rating ? summary.rating.replace(/_/g, ' ') : '-'}</strong></div>
+                <div class="fund-row"><span>Target Price</span><strong>${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</strong></div>
+                <div class="fund-row"><span>Upside</span><strong class="${upsideColor}">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</strong></div>
+            </div>
+            <div class="fund-card glass">
+                <div class="fund-card-title"><i class="ri-dashboard-3-line"></i> Risk & Growth</div>
+                <div class="fund-row"><span>Beta</span><strong>${f.beta}</strong></div>
+                <div class="fund-row"><span>52W Range</span><strong>${f.fiftyTwoWeekLow !== '-' ? '$' + f.fiftyTwoWeekLow : '-'} - ${f.fiftyTwoWeekHigh !== '-' ? '$' + f.fiftyTwoWeekHigh : '-'}</strong></div>
+                <div class="fund-row"><span>Rev Growth</span><strong>${f.revenueGrowth}</strong></div>
+            </div>
+        `;
+        fundBox.style.display = 'grid';
+    } else if (fundBox) {
+        fundBox.style.display = 'none';
+    }
 }
 
 // --- Chart ---

@@ -737,3 +737,43 @@ input {
 
 
 
+
+/* Fundamentals Dashboard */
+.fundamentals-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+.fund-card {
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--panel-bg);
+}
+.fund-card-title {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+.fund-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+.fund-row:last-child {
+    margin-bottom: 0;
+}
+.fund-row span {
+    color: var(--text-muted);
+}
+@media (max-width: 768px) {
+    .fundamentals-grid {
+        grid-template-columns: 1fr;
+    }
+}
