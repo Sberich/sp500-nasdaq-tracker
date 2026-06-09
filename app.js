@@ -561,13 +561,12 @@ function renderSummary(summary) {
 
         heroFundBox.innerHTML = `
             <div class="stat-grid" style="margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-strong);">
-                <div class="stat-item" style="border-bottom: none; padding-bottom: 4px;">
-                    <span class="stat-label">TARGET PRICE</span>
-                    <strong class="stat-value" style="font-size: 16px; font-family: var(--font-mono);">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'} <span class="${upsideColor}" style="font-size: 13px;">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span></strong>
-                </div>
                 <div class="stat-item" style="border-bottom: none; padding-bottom: 0;">
-                    <span class="stat-label"></span>
-                    <div style="display:flex; justify-content: flex-end;">${ratingBadge}</div>
+                    <span class="stat-label">TARGET</span>
+                    <div style="display:flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                        <strong class="stat-value" style="font-size: 15px; font-family: var(--font-mono);">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'} <span class="${upsideColor}" style="font-size: 12px;">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span></strong>
+                        ${ratingBadge}
+                    </div>
                 </div>
             </div>
             
