@@ -544,16 +544,46 @@ function createLevelRow(type, label, lvl, price) {
 function renderSummary(summary) {
     if (!summary) return;
     
-    // Analyst Rating Badge
-    const badgeWrap = document.getElementById('d-analyst-badge');
-    if (summary.rating && badgeWrap) {
-        const r = summary.rating.replace(/_/g, ' ').toUpperCase();
-        let colorClass = 'rating-hold';
-        if (r.includes('BUY')) colorClass = 'rating-buy';
-        if (r.includes('SELL')) colorClass = 'rating-sell';
-        badgeWrap.innerHTML = `<span class="rating-badge ${colorClass}">${r}</span>`;
-    } else if (badgeWrap) {
-        badgeWrap.innerHTML = '';
+    // Combined Hero Fundamentals
+    const heroFundBox = document.getElementById('d-hero-fundamentals');
+    if (summary.fundamentals && heroFundBox) {
+        const f = summary.fundamentals;
+        const upsideColor = f.upsideRaw > 0 ? 'text-green' : (f.upsideRaw < 0 ? 'text-red' : '');
+        
+        let ratingBadge = '';
+        if (summary.rating) {
+            const r = summary.rating.replace(/_/g, ' ').toUpperCase();
+            let colorClass = 'rating-hold';
+            if (r.includes('BUY')) colorClass = 'rating-buy';
+            if (r.includes('SELL')) colorClass = 'rating-sell';
+            ratingBadge = `<span class="rating-badge ${colorClass}" style="padding: 4px 10px; font-size: 11px;">${r}</span>`;
+        }
+
+        heroFundBox.innerHTML = `
+            <div class="hero-fund-box">
+                <div class="hfb-top">
+                    <div class="hfb-target-info">
+                        <span class="hfb-label">Target Price</span>
+                        <div class="hfb-price-row">
+                            <strong class="hfb-price">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</strong>
+                            <span class="hfb-upside ${upsideColor}">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span>
+                        </div>
+                    </div>
+                    <div class="hfb-badge">${ratingBadge}</div>
+                </div>
+                <div class="hfb-bottom">
+                    <div class="hfb-stat"><span>P/E</span><strong>${f.trailingPE}</strong></div>
+                    <div class="hfb-stat"><span>Mcap</span><strong>${f.marketCap}</strong></div>
+                    <div class="hfb-stat"><span>Div</span><strong>${f.dividendYield}</strong></div>
+                    <div class="hfb-stat"><span>Beta</span><strong>${f.beta}</strong></div>
+                    <div class="hfb-stat"><span>Growth</span><strong class="${parseFloat(f.revenueGrowth) > 0 ? 'text-green' : (parseFloat(f.revenueGrowth) < 0 ? 'text-red' : '')}">${f.revenueGrowth}</strong></div>
+                </div>
+            </div>
+        `;
+        heroFundBox.style.display = 'block';
+    } else if (heroFundBox) {
+        heroFundBox.style.display = 'none';
+        heroFundBox.innerHTML = '';
     }
 
     // Company Description
@@ -563,41 +593,6 @@ function renderSummary(summary) {
         descBox.style.display = 'block';
     } else if (descBox) {
         descBox.style.display = 'none';
-    }
-    
-    // Fundamentals
-    const fundBox = document.getElementById('d-fundamentals');
-    if (summary.fundamentals && fundBox) {
-        const f = summary.fundamentals;
-        const upsideColor = f.upsideRaw > 0 ? 'text-green' : (f.upsideRaw < 0 ? 'text-red' : '');
-        let ratingBadge = '-';
-        if (summary.rating) {
-            const r = summary.rating.replace(/_/g, ' ').toUpperCase();
-            let colorClass = 'rating-hold';
-            if (r.includes('BUY')) colorClass = 'rating-buy';
-            if (r.includes('SELL')) colorClass = 'rating-sell';
-            ratingBadge = `<span class="rating-badge ${colorClass}" style="padding: 2px 6px; font-size: 10px;">${r}</span>`;
-        }
-
-        fundBox.innerHTML = `
-            <div class="fund-card fund-card-target">
-                <div class="fund-card-title"><i class="ri-focus-3-line" style="color:#38bdf8;"></i> Analyst Target</div>
-                <div class="fund-row"><span>Rating</span><strong>${ratingBadge}</strong></div>
-                <div class="fund-row"><span>Target Price</span><strong style="font-size: 16px; color:#fff;">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</strong></div>
-                <div class="fund-row"><span>Upside</span><strong class="${upsideColor}" style="font-size: 16px;">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</strong></div>
-            </div>
-            <div class="fund-card fund-card-stats">
-                <div class="fund-card-title"><i class="ri-bar-chart-grouped-line" style="color:#fbbf24;"></i> Key Statistics</div>
-                <div class="fund-row"><span>P/E Ratio</span><strong>${f.trailingPE}</strong></div>
-                <div class="fund-row"><span>Market Cap</span><strong>${f.marketCap}</strong></div>
-                <div class="fund-row"><span>Div Yield</span><strong>${f.dividendYield}</strong></div>
-                <div class="fund-row"><span>Beta</span><strong>${f.beta}</strong></div>
-                <div class="fund-row"><span>Rev Growth</span><strong>${f.revenueGrowth}</strong></div>
-            </div>
-        `;
-        fundBox.style.display = 'grid';
-    } else if (fundBox) {
-        fundBox.style.display = 'none';
     }
 }
 

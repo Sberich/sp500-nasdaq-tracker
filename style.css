@@ -744,76 +744,90 @@ input {
     }
 }
 
-/* Updated Fundamentals Dashboard (2 Columns, Colorful) */
-.fundamentals-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-top: 16px;
-    margin-bottom: 16px;
-}
-.fund-card {
-    padding: 16px;
+
+/* Hero Fundamentals Box (Middle Column) */
+.hero-fund-box {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    background: var(--panel-bg);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    position: relative;
-    overflow: hidden;
-}
-.fund-card-target {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
-    border: 1px solid rgba(56, 189, 248, 0.2);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
-}
-.fund-card-target::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, #0ea5e9, #38bdf8);
-}
-.fund-card-stats {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
-    border: 1px solid rgba(245, 158, 11, 0.2);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
-}
-.fund-card-stats::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
-}
-.fund-card-title {
-    font-size: 14px;
-    color: #fff;
-    margin-bottom: 16px;
+    padding: 14px 18px;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
     display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 4px;
 }
-.fund-card-title i {
-    font-size: 18px;
-}
-.fund-row {
+.hfb-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    font-size: 14px;
-    border-bottom: 1px dashed rgba(255,255,255,0.05);
-    padding-bottom: 6px;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    padding-bottom: 12px;
 }
-.fund-row:last-child {
-    margin-bottom: 0;
-    border-bottom: none;
-    padding-bottom: 0;
+.hfb-target-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
-.fund-row span {
-    color: #94a3b8;
+.hfb-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.hfb-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+.hfb-price {
+    font-size: 22px;
+    font-family: var(--font-mono);
+    color: #fff;
+    font-weight: 700;
+}
+.hfb-upside {
     font-size: 13px;
+    font-weight: 600;
 }
-.fund-row strong {
+.hfb-badge {
+    /* Contains rating-badge */
+}
+.hfb-bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
+}
+.hfb-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.hfb-stat span {
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+.hfb-stat strong {
+    font-size: 13px;
     color: #f8fafc;
     font-weight: 600;
+    font-family: var(--font-mono);
+}
+@media (max-width: 900px) {
+    .hfb-bottom {
+        flex-wrap: wrap;
+    }
+    .hfb-stat {
+        width: 30%;
+        margin-bottom: 8px;
+    }
+}
+@media (max-width: 768px) {
+    .hero-center {
+        padding: 12px 0 !important;
+        border-right: none;
+    }
 }
