@@ -855,3 +855,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) el.textContent = `v1.0001`;
         });
 });
+
+// --- Layout Toggles ---
+function toggleLeftPanel() {
+    const leftPanel = document.getElementById('list-panel');
+    const icon = document.getElementById('panel-toggle-icon');
+    
+    if (!leftPanel || !icon) return;
+    
+    leftPanel.classList.toggle('collapsed');
+    
+    if (leftPanel.classList.contains('collapsed')) {
+        icon.className = 'ri-arrow-right-s-line';
+    } else {
+        icon.className = 'ri-arrow-left-s-line';
+    }
+}

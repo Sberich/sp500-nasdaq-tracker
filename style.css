@@ -258,6 +258,40 @@ input {
     background: var(--panel-bg);
     flex-shrink: 0;
     z-index: 10;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+    overflow: hidden;
+}
+
+.panel-left.collapsed {
+    width: 0 !important;
+    border-right: none;
+    opacity: 0;
+}
+
+/* Panel Toggle Button */
+.panel-toggle-btn {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 60px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 100;
+    color: var(--text-muted);
+    transition: background 0.2s, color 0.2s;
+}
+
+.panel-toggle-btn:hover {
+    background: var(--hover-bg);
+    color: var(--text-main);
 }
 
 .filters-container {
@@ -656,6 +690,8 @@ input {
 @media (max-width: 768px) {
     .main-layout { flex-direction: column; }
     
+    .panel-toggle-btn { display: none !important; }
+
     .panel-left { width: 100%; height: 100%; border-right: none; }
     .panel-right { display: flex; flex-direction: column; background: var(--bg); position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 60; 
         transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);

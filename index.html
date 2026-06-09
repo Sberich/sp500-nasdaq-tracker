@@ -105,6 +105,11 @@
             
             <!-- Right Panel: Detail View -->
             <section class="panel-right hidden-mobile" id="detail-panel">
+                <!-- Collapse Toggle Button -->
+                <div class="panel-toggle-btn" onclick="toggleLeftPanel()" id="panel-toggle-btn" title="Toggle Sidebar">
+                    <i class="ri-arrow-left-s-line" id="panel-toggle-icon"></i>
+                </div>
+
                 <div class="detail-empty-state" id="empty-state" style="padding:0; overflow:hidden;">
                     <!-- TradingView Widget BEGIN -->
                     <div class="tradingview-widget-container" style="height:100%; width:100%;">
