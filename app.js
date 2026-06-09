@@ -560,24 +560,23 @@ function renderSummary(summary) {
         }
 
         heroFundBox.innerHTML = `
-            <div class="hero-fund-box">
-                <div class="hfb-top">
-                    <div class="hfb-target-info">
-                        <span class="hfb-label">Target Price</span>
-                        <div class="hfb-price-row">
-                            <strong class="hfb-price">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</strong>
-                            <span class="hfb-upside ${upsideColor}">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span>
-                        </div>
-                    </div>
-                    <div class="hfb-badge">${ratingBadge}</div>
+            <div class="stat-grid" style="margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-strong);">
+                <div class="stat-item" style="border-bottom: none; padding-bottom: 4px;">
+                    <span class="stat-label">TARGET PRICE</span>
+                    <strong class="stat-value" style="font-size: 16px; font-family: var(--font-mono);">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'} <span class="${upsideColor}" style="font-size: 13px;">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span></strong>
                 </div>
-                <div class="hfb-bottom">
-                    <div class="hfb-stat"><span>P/E</span><strong>${f.trailingPE}</strong></div>
-                    <div class="hfb-stat"><span>Mcap</span><strong>${f.marketCap}</strong></div>
-                    <div class="hfb-stat"><span>Div</span><strong>${f.dividendYield}</strong></div>
-                    <div class="hfb-stat"><span>Beta</span><strong>${f.beta}</strong></div>
-                    <div class="hfb-stat"><span>Growth</span><strong class="${parseFloat(f.revenueGrowth) > 0 ? 'text-green' : (parseFloat(f.revenueGrowth) < 0 ? 'text-red' : '')}">${f.revenueGrowth}</strong></div>
+                <div class="stat-item" style="border-bottom: none; padding-bottom: 0;">
+                    <span class="stat-label"></span>
+                    <div style="display:flex; justify-content: flex-end;">${ratingBadge}</div>
                 </div>
+            </div>
+            
+            <div class="stat-grid">
+                <div class="stat-item"><span class="stat-label">P/E RATIO</span><strong class="stat-value">${f.trailingPE}</strong></div>
+                <div class="stat-item"><span class="stat-label">MARKET CAP</span><strong class="stat-value">${f.marketCap}</strong></div>
+                <div class="stat-item"><span class="stat-label">DIV YIELD</span><strong class="stat-value">${f.dividendYield}</strong></div>
+                <div class="stat-item"><span class="stat-label">BETA</span><strong class="stat-value">${f.beta}</strong></div>
+                <div class="stat-item" style="border-bottom: none; padding-bottom: 0;"><span class="stat-label">REV GROWTH</span><strong class="stat-value ${parseFloat(f.revenueGrowth) > 0 ? 'text-green' : (parseFloat(f.revenueGrowth) < 0 ? 'text-red' : '')}">${f.revenueGrowth}</strong></div>
             </div>
         `;
         heroFundBox.style.display = 'block';
