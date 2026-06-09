@@ -570,23 +570,28 @@ function renderSummary(summary) {
     if (summary.fundamentals && fundBox) {
         const f = summary.fundamentals;
         const upsideColor = f.upsideRaw > 0 ? 'text-green' : (f.upsideRaw < 0 ? 'text-red' : '');
+        let ratingBadge = '-';
+        if (summary.rating) {
+            const r = summary.rating.replace(/_/g, ' ').toUpperCase();
+            let colorClass = 'rating-hold';
+            if (r.includes('BUY')) colorClass = 'rating-buy';
+            if (r.includes('SELL')) colorClass = 'rating-sell';
+            ratingBadge = `<span class="rating-badge ${colorClass}" style="padding: 2px 6px; font-size: 10px;">${r}</span>`;
+        }
+
         fundBox.innerHTML = `
-            <div class="fund-card glass">
-                <div class="fund-card-title"><i class="ri-pie-chart-2-line"></i> Valuation</div>
+            <div class="fund-card fund-card-target">
+                <div class="fund-card-title"><i class="ri-focus-3-line" style="color:#38bdf8;"></i> Analyst Target</div>
+                <div class="fund-row"><span>Rating</span><strong>${ratingBadge}</strong></div>
+                <div class="fund-row"><span>Target Price</span><strong style="font-size: 16px; color:#fff;">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</strong></div>
+                <div class="fund-row"><span>Upside</span><strong class="${upsideColor}" style="font-size: 16px;">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</strong></div>
+            </div>
+            <div class="fund-card fund-card-stats">
+                <div class="fund-card-title"><i class="ri-bar-chart-grouped-line" style="color:#fbbf24;"></i> Key Statistics</div>
                 <div class="fund-row"><span>P/E Ratio</span><strong>${f.trailingPE}</strong></div>
                 <div class="fund-row"><span>Market Cap</span><strong>${f.marketCap}</strong></div>
                 <div class="fund-row"><span>Div Yield</span><strong>${f.dividendYield}</strong></div>
-            </div>
-            <div class="fund-card glass">
-                <div class="fund-card-title"><i class="ri-focus-2-line"></i> Analyst Target</div>
-                <div class="fund-row"><span>Rating</span><strong>${summary.rating ? summary.rating.replace(/_/g, ' ') : '-'}</strong></div>
-                <div class="fund-row"><span>Target Price</span><strong>${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</strong></div>
-                <div class="fund-row"><span>Upside</span><strong class="${upsideColor}">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</strong></div>
-            </div>
-            <div class="fund-card glass">
-                <div class="fund-card-title"><i class="ri-dashboard-3-line"></i> Risk & Growth</div>
                 <div class="fund-row"><span>Beta</span><strong>${f.beta}</strong></div>
-                <div class="fund-row"><span>52W Range</span><strong>${f.fiftyTwoWeekLow !== '-' ? '$' + f.fiftyTwoWeekLow : '-'} - ${f.fiftyTwoWeekHigh !== '-' ? '$' + f.fiftyTwoWeekHigh : '-'}</strong></div>
                 <div class="fund-row"><span>Rev Growth</span><strong>${f.revenueGrowth}</strong></div>
             </div>
         `;
@@ -938,3 +943,4 @@ function toggleLeftPanel() {
         icon.className = 'ri-arrow-left-s-line';
     }
 }
+
