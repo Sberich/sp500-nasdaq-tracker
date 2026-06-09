@@ -74,7 +74,12 @@
                 <div class="filters-container glass">
                     <div class="filter-group">
                         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
-                            <div class="filter-label" style="margin-bottom:0;">MARKETS</div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div class="filter-label" style="margin-bottom:0;">MARKETS</div>
+                                <button id="sort-btn" onclick="toggleSort()" class="tab-btn" style="padding:2px 8px; font-size:11px; margin:0; min-height:auto; height:22px;" title="เปลี่ยนวิธีเรียงลำดับ">
+                                    <i class="ri-magic-line"></i> Auto
+                                </button>
+                            </div>
                             <div class="stats-bar" id="stats-bar" style="padding:0;">
                                 <!-- Stats populated dynamically -->
                             </div>

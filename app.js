@@ -213,6 +213,22 @@ function buildSectorTabs() {
     ).join('');
 }
 
+let currentSort = 'auto'; // 'auto', 'az', 's1'
+
+function toggleSort() {
+    if (currentSort === 'auto') currentSort = 'az';
+    else if (currentSort === 'az') currentSort = 's1';
+    else currentSort = 'auto';
+    
+    const btn = document.getElementById('sort-btn');
+    if (btn) {
+        if (currentSort === 'auto') btn.innerHTML = '<i class="ri-magic-line"></i> Auto';
+        else if (currentSort === 'az') btn.innerHTML = '<i class="ri-sort-asc"></i> A-Z';
+        else btn.innerHTML = '<i class="ri-funds-line"></i> S1';
+    }
+    renderList();
+}
+
 function renderList() {
     const query = elSearchInput.value.trim().toUpperCase();
     
@@ -229,13 +245,34 @@ function renderList() {
         return true;
     });
     
-    // Sort by closeness to Support 1
-    stocks.sort((a, b) => {
-        if (a.pctS1 == null && b.pctS1 == null) return 0;
-        if (a.pctS1 == null) return 1;
-        if (b.pctS1 == null) return -1;
-        return Math.abs(a.pctS1) - Math.abs(b.pctS1);
-    });
+    // Adaptive Sorting Logic
+    const isMoverTab = ['day_gainers', 'day_losers', 'most_actives', 'trending_now'].includes(currentIndex);
+    
+    if (!isMoverTab) {
+        let effectiveSort = currentSort;
+        if (effectiveSort === 'auto') {
+            // Adaptive defaults based on tab
+            if (['fav', 'watch'].includes(currentIndex)) {
+                effectiveSort = 's1';
+            } else if (['7MAG', 'all', 'S&P500', 'NASDAQ100', 'NYSE'].includes(currentIndex)) {
+                effectiveSort = 'az';
+            } else {
+                effectiveSort = 'az'; // Default for sectors
+            }
+        }
+        
+        if (effectiveSort === 'az') {
+            stocks.sort((a, b) => (a.symbol || '').localeCompare(b.symbol || ''));
+        } else {
+            // Sort by closeness to Support 1
+            stocks.sort((a, b) => {
+                if (a.pctS1 == null && b.pctS1 == null) return 0;
+                if (a.pctS1 == null) return 1;
+                if (b.pctS1 == null) return -1;
+                return Math.abs(a.pctS1) - Math.abs(b.pctS1);
+            });
+        }
+    }
     
     if (!stocks.length) {
         elStockList.innerHTML = `<div class="loader-container"><p>ไม่พบข้อมูลหุ้น</p></div>`;
