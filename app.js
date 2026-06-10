@@ -563,7 +563,7 @@ function renderSummary(summary) {
             <div class="stat-grid" style="margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-strong);">
                 <div class="stat-item" style="border-bottom: none; padding-bottom: 0;">
                     <span class="stat-label">TARGET</span>
-                    <div style="display:flex; align-items: center; gap: 6px; flex-wrap: nowrap; justify-content: flex-end;">
+                    <div class="target-val-group" style="display:flex; align-items: center; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; min-width: 0;">
                         <strong class="stat-value target-val-text" style="font-size: 15px; font-family: var(--font-mono);">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'} <span class="${upsideColor} target-upside-text" style="font-size: 12px;">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span></strong>
                         ${ratingBadge}
                     </div>
