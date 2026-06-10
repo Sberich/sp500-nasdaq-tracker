@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     /* Light Theme */
     --bg: #f8fafc;
     --panel-bg: rgba(255, 255, 255, 0.7);
@@ -527,7 +527,7 @@ input {
     border: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow: 0 10px 30px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
     display: grid;
-    grid-template-columns: 1.2fr 1fr minmax(260px, 300px);
+    grid-template-columns: 1.2fr 1fr 1.1fr;
     gap: 0;
     align-items: stretch;
 }
