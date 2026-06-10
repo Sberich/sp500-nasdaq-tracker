@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     /* Light Theme */
     --bg: #f8fafc;
     --panel-bg: rgba(255, 255, 255, 0.7);
@@ -490,6 +490,7 @@ input {
 .mobile-back-btn { display: none; }
 .stock-title-group { display: flex; align-items: center; gap: 12px; }
 .stock-title-group h2 { font-size: 20px; font-weight: 700; }
+.action-group { display: flex; align-items: center; gap: 12px; }
 .fav-btn { font-size: 20px; }
 .fav-btn.is-fav { color: var(--yellow); }
 .watch-btn { font-size: 20px; }
@@ -830,6 +831,7 @@ input {
         margin-bottom: 8px;
     }
 }
+
 
 
 
