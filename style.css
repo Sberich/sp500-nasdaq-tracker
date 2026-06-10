@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     /* Light Theme */
     --bg: #f8fafc;
     --panel-bg: rgba(255, 255, 255, 0.7);
@@ -484,7 +484,7 @@ input {
 
 .detail-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 2px 24px; border-bottom: 1px solid var(--border);
+    padding: 20px 32px; border-bottom: 1px solid var(--border);
     z-index: 20;
 }
 .mobile-back-btn { display: none; }
@@ -716,7 +716,7 @@ input {
     .list-header { padding: 8px 12px 8px 12px !important; }
     .list-header > div:first-child { margin-bottom: 6px !important; }
 
-    .detail-header { padding: 12px 16px; }
+    .detail-header { padding: 16px 20px; }
     .detail-scroll { padding: 16px; overflow-x: hidden; }
     .hero-card { padding: 16px; grid-template-columns: 1fr; gap: 0; text-align: center; }
     .hero-left { border-right: none; padding-right: 0; padding-bottom: 20px; border-bottom: 1px dashed rgba(255,255,255,0.1); }
