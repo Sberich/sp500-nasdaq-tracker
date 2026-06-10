@@ -837,3 +837,23 @@ input {
 
 
 
+
+/* Responsive Scaling for Narrow Columns (e.g. iPad portrait) */
+.hero-center, .hero-right-col {
+    container-type: inline-size;
+    min-width: 0;
+}
+@container (max-width: 280px) {
+    .stat-label, .range-label { font-size: 10px; letter-spacing: 0; }
+    .stat-value { font-size: 11px; }
+    .range-min, .range-max { font-size: 10px; }
+    .target-val-text { font-size: 13px !important; }
+    .target-upside-text { font-size: 10px !important; }
+    .rating-badge { padding: 2px 6px; font-size: 9px; }
+}
+@container (max-width: 220px) {
+    .stat-label, .range-label { font-size: 9px; }
+    .stat-value { font-size: 10px; }
+    .target-val-text { font-size: 11px !important; }
+    .rating-badge { padding: 2px 4px; font-size: 8px; }
+}
