@@ -1,4 +1,4 @@
-﻿/* Premium Dashboard Variables */
+/* Premium Dashboard Variables */
 :root {
   --pm-bg: #0d1117;
   --pm-card-bg: #161b22;
@@ -19,13 +19,30 @@
     border-radius: 16px !important;
     padding: 24px 32px !important;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
-    display: grid;
-    grid-template-columns: 1.2fr 1fr 1.1fr;
-    gap: 0;
+    display: flex !important;
+    gap: 40px !important;
     align-items: stretch;
 }
+.hero-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 220px;
+}
+.hero-center, .hero-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 240px;
+    flex: 1;
+}
 .hero-left, .hero-center {
-    border-right: 1px solid var(--pm-border) !important;
+    border-right: none !important;
+}
+.pm-divider {
+    width: 1px;
+    background: var(--pm-border);
+    flex-shrink: 0;
 }
 .pm-title { font-size: 20px; font-weight: 700; color: var(--pm-white); margin: 0; }
 .pm-subtitle { font-size: 13px; color: var(--pm-text-muted); margin-bottom: 16px; }
@@ -62,7 +79,6 @@
     align-items: center;
     border-bottom: 1px solid var(--pm-border);
     padding-bottom: 8px;
-    padding-top: 8px;
     width: 100%;
 }
 .pm-row:last-child { border-bottom: none; }
