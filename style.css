@@ -1,3 +1,132 @@
+﻿/* Premium Dashboard Variables */
+:root {
+  --pm-bg: #0d1117;
+  --pm-card-bg: #161b22;
+  --pm-border: #30363d;
+  --pm-text: #c9d1d9;
+  --pm-text-muted: #8b949e;
+  --pm-white: #ffffff;
+  --pm-green: #3fb950;
+  --pm-green-bg: rgba(63, 185, 80, 0.15);
+  --pm-red: #f85149;
+  --pm-red-bg: rgba(248, 81, 73, 0.15);
+}
+
+/* Premium Hero Styles */
+.hero-card {
+    background: var(--pm-card-bg) !important;
+    border: 1px solid var(--pm-border) !important;
+    border-radius: 16px !important;
+    padding: 24px 32px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1.1fr;
+    gap: 0;
+    align-items: stretch;
+}
+.hero-left, .hero-center {
+    border-right: 1px solid var(--pm-border) !important;
+}
+.pm-title { font-size: 20px; font-weight: 700; color: var(--pm-white); margin: 0; }
+.pm-subtitle { font-size: 13px; color: var(--pm-text-muted); margin-bottom: 16px; }
+.pm-price { font-size: 38px; font-weight: 700; color: var(--pm-white); margin: 0; letter-spacing: -1px; line-height: 1.2;}
+.pm-change { font-size: 15px; font-weight: 600; color: var(--pm-green); margin-bottom: 16px; }
+.pm-change.down { color: var(--pm-red); }
+
+.pm-pill {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+.pm-pill.green { background: var(--pm-green-bg); color: var(--pm-green); }
+.pm-pill.red { background: var(--pm-red-bg); color: var(--pm-red); }
+
+.pm-badges-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+.pm-badges-row .pm-pill { margin-bottom: 0; font-size: 11px; padding: 4px 8px; }
+
+.pm-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--pm-border);
+    padding-bottom: 8px;
+    padding-top: 8px;
+    width: 100%;
+}
+.pm-row:last-child { border-bottom: none; }
+
+.pm-label { font-size: 11px; font-weight: 600; color: var(--pm-text-muted); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+.pm-val { font-size: 14px; font-weight: 600; color: var(--pm-white); display: flex; align-items: center; gap: 8px; white-space: nowrap; justify-content: flex-end;}
+
+.pm-val-green { color: var(--pm-green); font-size: 12px;}
+.pm-val-red { color: var(--pm-red); font-size: 12px;}
+
+.pm-buy-btn {
+    background: var(--pm-green-bg);
+    color: var(--pm-green);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.pm-sell-btn {
+    background: var(--pm-red-bg);
+    color: var(--pm-red);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.pm-range-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    width: 100%;
+}
+.pm-range-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--pm-border);
+    border-radius: 2px;
+    position: relative;
+    min-width: 50px;
+}
+.pm-range-thumb {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: var(--pm-white);
+    border-radius: 50%;
+    top: -2px;
+    box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    transform: translateX(-50%);
+}
+.pm-range-val { font-size: 12px; font-weight: 600; color: var(--pm-white); white-space: nowrap; }
+
+/* Fluid Typography overrides for Premium UI */
+@container (max-width: 350px) {
+    .pm-label { font-size: clamp(8px, 3.5cqw, 11px) !important; }
+    .pm-val { font-size: clamp(10px, 4cqw, 14px) !important; }
+    .pm-range-val { font-size: clamp(9px, 3.5cqw, 12px) !important; }
+    .pm-val-green, .pm-val-red { font-size: clamp(8px, 3.2cqw, 12px) !important; }
+    .pm-buy-btn, .pm-sell-btn { font-size: clamp(7px, 2.5cqw, 11px) !important; padding: 2px 4px !important; }
+    .pm-badges-row .pm-pill { font-size: clamp(8px, 3cqw, 11px) !important; padding: 2px 4px !important;}
+    .pm-pill { font-size: clamp(9px, 3.5cqw, 12px) !important; padding: 4px 8px !important; }
+}
 :root {
     /* Light Theme */
     --bg: #f8fafc;
@@ -859,5 +988,6 @@ input {
     .rating-badge { font-size: clamp(7px, 2.5cqw, 11px); padding: 2px 4px; }
     .target-val-group { gap: 4px !important; }
 }
+
 
 

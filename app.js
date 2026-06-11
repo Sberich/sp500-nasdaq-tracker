@@ -1,4 +1,4 @@
-// --- Constants & State ---
+﻿// --- Constants & State ---
 let API_URL = localStorage.getItem('SP_API_URL') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
 let allStocks = [];
 let favorites = JSON.parse(localStorage.getItem('SP_FAVS') || '[]');
@@ -487,13 +487,13 @@ function renderLiveLevels(data) {
         strong_down: ['strong-down', 'ri-arrow-right-down-line', 'Downtrend แข็งแกร่ง (ใต้ EMA200 D+W)']
     };
     const [tCls, tIcon, tLabel] = trendMap[data.trend] || ['sideways', 'ri-subtract-line', '—'];
-    document.getElementById('trend-badge-wrap').innerHTML = `<span class="trend-badge ${tCls}"><i class="${tIcon}"></i> ${tLabel}</span>`;
+    document.getElementById('trend-badge-wrap').innerHTML = `<div class="pm-pill ${tCls.includes('up') ? 'green' : (tCls.includes('down') ? 'red' : '')}"><i class="${tIcon}" style="margin-right: 4px;"></i> ${tLabel}</div>`;
     
     // EMA Bar
     if (ema) {
         let html = '';
-        if (ema.daily) html += `<span class="ema-chip ${ema.position === 'above' ? 'above' : 'below'}">EMA200D $${ema.daily} (${ema.pctD}%)</span>`;
-        if (ema.weekly) html += `<span class="ema-chip ${parseFloat(ema.pctW) > 0 ? 'above' : 'below'}">EMA200W $${ema.weekly} (${ema.pctW}%)</span>`;
+        if (ema.daily) html += `<div class="pm-pill ${ema.position === 'above' ? 'green' : 'red'}">EMA200D $${ema.daily} (${ema.pctD}%)</div>`;
+        if (ema.weekly) html += `<div class="pm-pill ${parseFloat(ema.pctW) > 0 ? 'green' : 'red'}">EMA200W $${ema.weekly} (${ema.pctW}%)</div>`;
         document.getElementById('ema-bar').innerHTML = html;
     } else {
         document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na">ไม่มีข้อมูล EMA</span>';
@@ -560,22 +560,33 @@ function renderSummary(summary) {
         }
 
         heroFundBox.innerHTML = `
-            <div class="stat-grid" style="margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-strong);">
-                <div class="stat-item" style="border-bottom: none; padding-bottom: 0;">
-                    <span class="stat-label">TARGET</span>
-                    <div class="target-val-group" style="display:flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; min-width: 0;">
-                        <strong class="stat-value target-val-text" style="font-size: 15px; font-family: var(--font-mono); white-space: nowrap;">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'} <span class="${upsideColor} target-upside-text" style="font-size: 12px;">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span></strong>
-                        ${ratingBadge}
-                    </div>
+            <div class="pm-row" style="padding-bottom: 12px; margin-bottom: 8px;">
+                <div class="pm-label">Target</div>
+                <div class="pm-val target-val-group" style="flex-wrap: wrap;">
+                    <span class="target-val-text">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</span>
+                    <span class="target-upside-text ${f.upsideRaw > 0 ? 'pm-val-green' : 'pm-val-red'}">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span>
+                    ${f.rating ? `<span class="${f.upsideRaw > 0 ? 'pm-buy-btn' : 'pm-sell-btn'}" style="font-size: 10px;">${f.rating.toUpperCase()}</span>` : '}
                 </div>
             </div>
-            
-            <div class="stat-grid">
-                <div class="stat-item"><span class="stat-label">P/E RATIO</span><strong class="stat-value">${f.trailingPE}</strong></div>
-                <div class="stat-item"><span class="stat-label">MARKET CAP</span><strong class="stat-value">${f.marketCap}</strong></div>
-                <div class="stat-item"><span class="stat-label">DIV YIELD</span><strong class="stat-value">${f.dividendYield}</strong></div>
-                <div class="stat-item"><span class="stat-label">BETA</span><strong class="stat-value">${f.beta}</strong></div>
-                <div class="stat-item" style="border-bottom: none; padding-bottom: 0;"><span class="stat-label">REV GROWTH</span><strong class="stat-value ${parseFloat(f.revenueGrowth) > 0 ? 'text-green' : (parseFloat(f.revenueGrowth) < 0 ? 'text-red' : '')}">${f.revenueGrowth}</strong></div>
+            <div class="pm-row">
+                <div class="pm-label">P/E Ratio</div>
+                <div class="pm-val">${f.trailingPE}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">Market Cap</div>
+                <div class="pm-val">${f.marketCap}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">Div Yield</div>
+                <div class="pm-val">${f.dividendYield}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">Beta</div>
+                <div class="pm-val">${f.beta}</div>
+            </div>
+            <div class="pm-row" style="border-bottom: none;">
+                <div class="pm-label">Rev Growth</div>
+                <div class="pm-val ${parseFloat(f.revenueGrowth) > 0 ? 'pm-val-green' : (parseFloat(f.revenueGrowth) < 0 ? 'pm-val-red' : '')}">${f.revenueGrowth}</div>
             </div>
         `;
         heroFundBox.style.display = 'block';
@@ -936,4 +947,7 @@ function toggleLeftPanel() {
         icon.className = 'ri-arrow-left-s-line';
     }
 }
+
+
+
 
