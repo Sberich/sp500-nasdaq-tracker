@@ -1,4 +1,4 @@
-﻿// --- Constants & State ---
+// --- Constants & State ---
 let API_URL = localStorage.getItem('SP_API_URL') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
 let allStocks = [];
 let favorites = JSON.parse(localStorage.getItem('SP_FAVS') || '[]');
@@ -565,7 +565,7 @@ function renderSummary(summary) {
                 <div class="pm-val target-val-group" style="flex-wrap: wrap;">
                     <span class="target-val-text">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</span>
                     <span class="target-upside-text ${f.upsideRaw > 0 ? 'pm-val-green' : 'pm-val-red'}">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span>
-                    ${f.rating ? `<span class="${f.upsideRaw > 0 ? 'pm-buy-btn' : 'pm-sell-btn'}" style="font-size: 10px;">${f.rating.toUpperCase()}</span>` : '}
+                    ${f.rating ? `<span class="${f.upsideRaw > 0 ? 'pm-buy-btn' : 'pm-sell-btn'}" style="font-size: 10px;">${f.rating.toUpperCase()}</span>` : ''}
                 </div>
             </div>
             <div class="pm-row">
