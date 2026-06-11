@@ -684,9 +684,9 @@ function renderChart(points, emaData, livePrice) {
     const rsiEl = document.getElementById('d-rsi');
     if (rsi != null) {
         let c = rsi < 30 ? 'var(--green)' : rsi > 70 ? 'var(--red)' : 'var(--text-main)';
-        rsiEl.innerHTML = `RSI: <span style="color:${c}">${rsi}</span>`;
+        rsiEl.innerHTML = `<span style="color:${c}">${rsi}</span>`;
     } else {
-        rsiEl.textContent = 'RSI: —';
+        rsiEl.textContent = '—';
     }
     
     // Colors based on theme
