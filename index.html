@@ -28,7 +28,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 50' fill='none'><path d='M 5 25 L 35 25 L 40 20 L 45 35 L 52 4 L 58 46 L 65 25 L 95 25' stroke='%2300d4ff' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><defs><filter id='g' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='3' result='b1'/><feGaussianBlur stdDeviation='8' result='b2'/><feMerge><feMergeNode in='b2'/><feMergeNode in='b1'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><path d='M 0 50 L 25 50 L 45 10 L 60 90 L 75 50 L 100 50' stroke='%2300ffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' filter='url(%23g)'/></svg>">
 
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
@@ -41,12 +41,12 @@
         <!-- Header -->
         <header class="app-header glass">
             <div class="header-left">
-                  <div class="logo-box" style="background:transparent; box-shadow:none; padding:0; width: 64px; height: 32px; cursor:pointer; margin-left: -5px;" onclick="openAbout()">
-                      <svg class="neon-pulse-new" viewBox="0 0 100 50" fill="none" style="width: 100%; height: 100%; overflow: visible;">
+                  <div class="logo-box" style="background:transparent; box-shadow:none; padding:0; width: 96px; height: 48px; cursor:pointer; margin-left: -5px;" onclick="openAbout()">
+                      <svg class="neon-pulse-new" viewBox="0 0 100 100" fill="none" style="width: 100%; height: 100%; overflow: visible;">
     <defs>
-        <filter id="neon-glow-minimal" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="blur1" />
-            <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur2" />
+        <filter id="double-neon" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur1" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur2" />
             <feMerge>
                 <feMergeNode in="blur2" />
                 <feMergeNode in="blur1" />
@@ -54,13 +54,11 @@
             </feMerge>
         </filter>
     </defs>
-    <!-- Crisp Outer Glow -->
-    <path d="M 5 25 L 35 25 L 40 20 L 45 35 L 52 4 L 58 46 L 65 25 L 95 25" 
-          stroke="#00d4ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" 
-          filter="url(#neon-glow-minimal)" />
-    <!-- Sharp Hot Center -->
-    <path d="M 5 25 L 35 25 L 40 20 L 45 35 L 52 4 L 58 46 L 65 25 L 95 25" 
-          stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 0 57 L 25 57 Q 31 57 34 43 L 40 70 L 48 10 L 55 90 L 63 37 L 69 63 Q 73 63 75 57 L 100 57" 
+          stroke="#00ffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" 
+          filter="url(#double-neon)" />
+    <path d="M 0 57 L 25 57 Q 31 57 34 43 L 40 70 L 48 10 L 55 90 L 63 37 L 69 63 Q 73 63 75 57 L 100 57" 
+          stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
                   </div>
                 <div>
@@ -408,11 +406,11 @@
   <div class="about-box">
     <button class="about-close-abs" onclick="closeAbout()"><i class="ri-close-line"></i></button>
     <div class="about-logo" style="background:transparent; box-shadow:none; width: 160px; height: 80px; padding:0; display:flex; align-items:center; justify-content:center;">
-        <svg class="neon-pulse-new" viewBox="0 0 100 50" fill="none" style="width: 100%; height: 100%; overflow: visible;">
+        <svg class="neon-pulse-new" viewBox="0 0 100 100" fill="none" style="width: 100%; height: 100%; overflow: visible;">
     <defs>
-        <filter id="neon-glow-minimal" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="blur1" />
-            <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur2" />
+        <filter id="double-neon" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur1" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur2" />
             <feMerge>
                 <feMergeNode in="blur2" />
                 <feMergeNode in="blur1" />
@@ -420,13 +418,11 @@
             </feMerge>
         </filter>
     </defs>
-    <!-- Crisp Outer Glow -->
-    <path d="M 5 25 L 35 25 L 40 20 L 45 35 L 52 4 L 58 46 L 65 25 L 95 25" 
-          stroke="#00d4ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" 
-          filter="url(#neon-glow-minimal)" />
-    <!-- Sharp Hot Center -->
-    <path d="M 5 25 L 35 25 L 40 20 L 45 35 L 52 4 L 58 46 L 65 25 L 95 25" 
-          stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 0 57 L 25 57 Q 31 57 34 43 L 40 70 L 48 10 L 55 90 L 63 37 L 69 63 Q 73 63 75 57 L 100 57" 
+          stroke="#00ffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" 
+          filter="url(#double-neon)" />
+    <path d="M 0 57 L 25 57 Q 31 57 34 43 L 40 70 L 48 10 L 55 90 L 63 37 L 69 63 Q 73 63 75 57 L 100 57" 
+          stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
       </div>
     <h2 class="about-title">AlphaZone</h2>
