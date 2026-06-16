@@ -28,7 +28,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='22 12 18 12 15 21 9 3 6 12 2 12'></polyline></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><filter id='glow' x='-50%25' y='-50%25' width='200%25' height='200%25'><feGaussianBlur in='SourceGraphic' stdDeviation='1.5' result='b'/><feMerge><feMergeNode in='b'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><polyline points='22 12 18 12 15 21 9 3 6 12 2 12' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' filter='url(%23glow)'/></svg>">
 
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
@@ -388,7 +388,11 @@
 <div class="about-overlay" id="about-modal">
   <div class="about-box">
     <button class="about-close-abs" onclick="closeAbout()"><i class="ri-close-line"></i></button>
-    <div class="about-logo"><i class="ri-pulse-line"></i></div>
+    <div class="about-logo" style="background:transparent; box-shadow:none;">
+        <svg class="neon-pulse" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 48px; height: 48px;">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+      </div>
     <h2 class="about-title">AlphaZone</h2>
     <div class="about-version" id="global-visit-count">v1.0001</div>
     <div class="about-dev">
