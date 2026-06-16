@@ -356,7 +356,10 @@ function createStockCard(s) {
         
         <div class="sc-info">
             <div class="sc-top">
-                <span class="sc-symbol">${s.symbol}</span>
+                <div style="display:flex; align-items:baseline; gap:6px;">
+                    <span class="sc-symbol">${s.symbol}</span>
+                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${s.extChangePct >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${s.extPrice.toFixed(2)} (${s.extChangePct > 0 ? '+' : ''}${s.extChangePct.toFixed(2)}%)</span>` : ''}
+                </div>
                 <span class="sc-price mono">${priceStr}</span>
             </div>
             <div class="sc-mid">
@@ -424,7 +427,8 @@ function openDetail(symbol) {
     const formatPct = (price, level) => {
         if (!price || !level) return '';
         const pct = ((level - price) / price) * 100;
-        return ` <span style="font-size:11px;color:var(--${pct>=0?'green':'red'})">(${pct>0?'+':''}${pct.toFixed(2)}%)</span>`;
+        const colorCls = pct >= 0 ? 'pm-val-green' : 'pm-val-red';
+        return ` <span class="${colorCls}">(${pct>0?'+':''}${pct.toFixed(2)}%)</span>`;
     };
 
     let rsiColor = 'var(--text-main)';
@@ -553,29 +557,43 @@ function renderSummary(summary) {
         let ratingBadge = '';
         if (summary.rating) {
             const r = summary.rating.replace(/_/g, ' ').toUpperCase();
-            let colorClass = 'rating-hold';
-            if (r.includes('BUY')) colorClass = 'rating-buy';
-            if (r.includes('SELL')) colorClass = 'rating-sell';
-            ratingBadge = `<span class="rating-badge ${colorClass}" style="padding: 4px 10px; font-size: 11px;">${r}</span>`;
+            let colorClass = 'pm-sell-btn'; // Default or hold
+            if (r.includes('BUY')) colorClass = 'pm-buy-btn';
+            ratingBadge = `<span class="${colorClass}">${r}</span>`;
         }
 
         heroFundBox.innerHTML = `
-            <div class="stat-grid" style="margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-strong);">
-                <div class="stat-item" style="border-bottom: none; padding-bottom: 0;">
-                    <span class="stat-label">TARGET</span>
-                    <div class="target-val-group" style="display:flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; min-width: 0;">
-                        <strong class="stat-value target-val-text" style="font-size: 15px; font-family: var(--font-mono); white-space: nowrap;">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'} <span class="${upsideColor} target-upside-text" style="font-size: 12px;">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span></strong>
-                        ${ratingBadge}
-                    </div>
+            ${(f.extPrice != null && f.extChangePct != null) ? `
+            <div class="pm-row pm-ext-row" style="padding-bottom: 8px; border-bottom: none; justify-content: flex-end;">
+                <div class="pm-val ${f.extChangePct >= 0 ? 'ext-green' : 'ext-red'}">${f.extType === 'PRE' ? '☀️ PRE-MARKET' : '🌙 AFTER-HOURS'}: $${f.extPrice.toFixed(2)} (${f.extChangePct > 0 ? '+' : ''}${f.extChangePct.toFixed(2)}%)</div>
+            </div>` : ''}
+            <div class="pm-row" style="padding-bottom: 12px;">
+                <div class="pm-label">TARGET</div>
+                <div class="pm-val target-val-group" style="flex-wrap: wrap; gap: 4px;">
+                    <span class="target-val-text">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</span>
+                    <span class="target-upside-text ${f.upsideRaw > 0 ? 'pm-val-green' : 'pm-val-red'}">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span>
+                    ${ratingBadge}
                 </div>
             </div>
-            
-            <div class="stat-grid">
-                <div class="stat-item"><span class="stat-label">P/E RATIO</span><strong class="stat-value">${f.trailingPE}</strong></div>
-                <div class="stat-item"><span class="stat-label">MARKET CAP</span><strong class="stat-value">${f.marketCap}</strong></div>
-                <div class="stat-item"><span class="stat-label">DIV YIELD</span><strong class="stat-value">${f.dividendYield}</strong></div>
-                <div class="stat-item"><span class="stat-label">BETA</span><strong class="stat-value">${f.beta}</strong></div>
-                <div class="stat-item" style="border-bottom: none; padding-bottom: 0;"><span class="stat-label">REV GROWTH</span><strong class="stat-value ${parseFloat(f.revenueGrowth) > 0 ? 'text-green' : (parseFloat(f.revenueGrowth) < 0 ? 'text-red' : '')}">${f.revenueGrowth}</strong></div>
+            <div class="pm-row">
+                <div class="pm-label">P/E RATIO</div>
+                <div class="pm-val">${f.trailingPE || f.pe}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">MARKET CAP</div>
+                <div class="pm-val">${f.marketCap}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">DIV YIELD</div>
+                <div class="pm-val">${f.dividendYield || f.divYield}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">BETA</div>
+                <div class="pm-val">${f.beta}</div>
+            </div>
+            <div class="pm-row" style="border-bottom: none;">
+                <div class="pm-label">REV GROWTH</div>
+                <div class="pm-val ${parseFloat(f.revenueGrowth || f.revGrowth) > 0 ? 'pm-val-green' : (parseFloat(f.revenueGrowth || f.revGrowth) < 0 ? 'pm-val-red' : '')}">${f.revenueGrowth || f.revGrowth}</div>
             </div>
         `;
         heroFundBox.style.display = 'block';
@@ -877,7 +895,10 @@ function createMoverCard(s) {
         
         <div class="sc-info">
             <div class="sc-top">
-                <span class="sc-symbol">${s.symbol}</span>
+                <div style="display:flex; align-items:baseline; gap:6px;">
+                    <span class="sc-symbol">${s.symbol}</span>
+                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${s.extChangePct >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${s.extPrice.toFixed(2)} (${s.extChangePct > 0 ? '+' : ''}${s.extChangePct.toFixed(2)}%)</span>` : ''}
+                </div>
                 <span class="sc-price mono">${priceStr}</span>
             </div>
             <div class="sc-mid">
