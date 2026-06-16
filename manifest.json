@@ -1,0 +1,17 @@
+{
+  "name": "AlphaZone",
+  "short_name": "AlphaZone",
+  "description": "S&P500 & NASDAQ100 Analysis Dashboard",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
