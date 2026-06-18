@@ -128,7 +128,6 @@ input {
     justify-content: center;
 }
 
-
 /* Index Ticker Card */
 .index-ticker-card {
     padding: 8px 14px;
@@ -531,17 +530,11 @@ input {
     display: flex; flex-direction: column; gap: 16px;
 }
 
-
-
-
-
 .company-name { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 2px;}
 .sector-name { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
 .price-row { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
 .price-row h1 { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
 .price-change { font-size: 15px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;}
-
-
 
 .ranges-container { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-strong); }
 .range-group { display: flex; flex-direction: column; gap: 6px; }
@@ -693,7 +686,6 @@ input {
 
 .hidden { display: none !important; }
 
-
     
 @media (max-width: 768px) {
     .main-layout { flex-direction: column; }
@@ -731,27 +723,11 @@ input {
     .canvas-container { margin-left: -32px; margin-right: -32px; width: calc(100% + 64px); }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @media (max-width: 768px) {
     .fundamentals-grid {
         grid-template-columns: 1fr;
     }
 }
-
 
 /* Hero Fundamentals Box (Middle Column) */
 .hero-fund-box {
@@ -881,7 +857,6 @@ input {
 .pm-range-thumb { position: absolute; width: 8px; height: 8px; background: var(--pm-white); border-radius: 50%; top: -2px; left: 50%; box-shadow: 0 0 4px rgba(0,0,0,0.5); }
 .pm-range-val { font-size: 12px; font-weight: 600; color: var(--pm-white); }
 
-
 /* Premium Fundamentals Grid */
 .fund-target-box {
     background: rgba(255, 255, 255, 0.02);
@@ -961,12 +936,6 @@ input {
     }
 }
 
-
-
-
-
-
-
 /* Fluid Responsive Typography for Narrow Columns */
 .hero-center, 
 .stat-item {
@@ -985,9 +954,6 @@ input {
     .rating-badge { font-size: clamp(7px, 2.5cqw, 11px); padding: 2px 4px; }
     .target-val-group { gap: 4px !important; }
 }
-
-
-
 
 /* Premium Dashboard UI Injection */
 .hero-card {
@@ -1025,7 +991,6 @@ input {
     background: var(--pm-border) !important;
     flex-shrink: 0 !important;
 }
-
 
 /* Premium Fundamentals Grid */
 .fund-target-box {
@@ -1112,7 +1077,6 @@ input {
     }
 }
 
-
 /* Extended Hours */
 .sc-ext-price {
     font-size: 10px;
@@ -1129,12 +1093,34 @@ input {
 .ext-green { color: var(--pm-green); }
 .ext-red { color: var(--pm-red); }
 
-
-.neon-pulse {
-    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9)) drop-shadow(0 0 3px rgba(56, 189, 248, 1));
-    animation: neonBreathe 3s infinite alternate;
-}
-@keyframes neonBreathe {
-    0% { filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.7)) drop-shadow(0 0 2px rgba(56, 189, 248, 1)); }
     100% { filter: drop-shadow(0 0 12px rgba(56, 189, 248, 1)) drop-shadow(0 0 4px rgba(56, 189, 248, 1)); }
+}
+
+    100% { filter: drop-shadow(0 0 10px rgba(56, 189, 248, 1)) drop-shadow(0 0 3px rgba(56, 189, 248, 1)) brightness(1.3); }
+}
+
+    100% { filter: brightness(1.3); transform: scale(1.02); }
+}
+
+    100% { filter: contrast(2) brightness(1.4); transform: scale(1.35); }
+}
+
+    100% { filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.8)) brightness(1.4); transform: scale(1.05); }
+}
+
+
+.neon-pulse-new {
+    animation: neonPulseAnim 2s infinite alternate ease-in-out;
+}
+@keyframes neonPulseAnim {
+    0% { filter: brightness(0.85); transform: scale(0.98); }
+    100% { filter: brightness(1.25) drop-shadow(0 0 6px rgba(0, 240, 255, 0.4)); transform: scale(1.02); }
+}
+
+.rotating {
+    animation: rotate-anim 1s linear infinite;
+}
+@keyframes rotate-anim {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
