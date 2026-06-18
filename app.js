@@ -65,6 +65,22 @@ let currentMover = null; // 'day_gainers' | 'day_losers' | 'most_actives' | null
 let moverCache = {};
 
 function setupEventListeners() {
+    // Refresh Button
+    document.getElementById('refresh-btn').addEventListener('click', async () => {
+        const icon = document.querySelector('#refresh-btn i');
+        icon.classList.add('rotating');
+        
+        await fetchStocks();
+        if (currentSymbol) {
+            await Promise.all([
+                loadLiveLevels(),
+                loadChartData()
+            ]);
+        }
+        
+        icon.classList.remove('rotating');
+    });
+
     // Search
     elSearchInput.addEventListener('input', () => {
         if (currentMover) return; // disable search in mover mode
