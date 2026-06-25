@@ -192,6 +192,14 @@ async function fetchStocks() {
         
         if (data.success) {
             allStocks = data.data || [];
+            if (data.favs) {
+                favorites = data.favs;
+                localStorage.setItem('SP_FAVS', JSON.stringify(favorites));
+            }
+            if (data.watch) {
+                watchlist = data.watch;
+                localStorage.setItem('SP_WATCH', JSON.stringify(watchlist));
+            }
             buildSectorTabs();
             renderList();
         } else {
@@ -213,6 +221,7 @@ function buildSectorTabs() {
         if (currentIndex === 'all') return true;
         const angels = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'];
           if (currentIndex === '7MAG') return angels.includes(s.symbol);
+          if (currentIndex === 'GPF') return s.index === 'GPF';
           if (currentIndex === 'S&P500') return s.index === 'S&P500' || s.index === 'Both';
           if (currentIndex === 'NASDAQ100') return s.index === 'NASDAQ100' || s.index === 'Both';
           return s.index === currentIndex;
@@ -395,6 +404,7 @@ function toggleFavorite(symbol) {
     if (idx === -1) favorites.push(symbol);
     else favorites.splice(idx, 1);
     localStorage.setItem('SP_FAVS', JSON.stringify(favorites));
+    syncFavWatchToBackend();
 }
 
 function toggleWatchlist(symbol) {
@@ -402,6 +412,7 @@ function toggleWatchlist(symbol) {
     if (idx === -1) watchlist.push(symbol);
     else watchlist.splice(idx, 1);
     localStorage.setItem('SP_WATCH', JSON.stringify(watchlist));
+    syncFavWatchToBackend();
 }
 
 // --- Detail View ---
@@ -974,3 +985,7 @@ function toggleLeftPanel() {
     }
 }
 
+
+function syncFavWatchToBackend() {
+    fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.join(',')}&watch=${watchlist.join(',')}`).catch(e => console.log('Sync failed', e));
+}
