@@ -1,8 +1,18 @@
+// --- Safe Storage ---
+function safeGet(key, defaultVal) {
+    try { return localStorage.getItem(key) || defaultVal; } 
+    catch(e) { return defaultVal; }
+}
+function safeSet(key, val) {
+    try { localStorage.setItem(key, val); } 
+    catch(e) { }
+}
+
 // --- Constants & State ---
-let API_URL = localStorage.getItem('SP_API_URL') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
+let API_URL = safeGet('SP_API_URL', '') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
 let allStocks = [];
-let favorites = JSON.parse(localStorage.getItem('SP_FAVS') || '[]');
-let watchlist = JSON.parse(localStorage.getItem('SP_WATCH') || '[]');
+let favorites = JSON.parse(safeGet('SP_FAVS', '[]') || '[]');
+let watchlist = JSON.parse(safeGet('SP_WATCH', '[]') || '[]');
 let currentSymbol = '';
 let currentRange = '1M';
 let currentSector = 'ทั้งหมด';
@@ -32,14 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- Theme Management ---
 function initTheme() {
-    const savedTheme = localStorage.getItem('SP_THEME') || 'dark';
+    const savedTheme = safeGet('SP_THEME', 'dark') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
     
     document.getElementById('theme-toggle').addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme');
         const next = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('SP_THEME', next);
+        safeSet('SP_THEME', next);
         if (priceChart) priceChart.update(); // Update chart colors
     });
 }
@@ -53,7 +63,7 @@ function showConfigModal() {
         const url = document.getElementById('api-url-input').value.trim();
         if (url) {
             API_URL = url;
-            localStorage.setItem('SP_API_URL', url);
+            safeSet('SP_API_URL', url);
             modal.classList.remove('active');
             fetchStocks();
         }
@@ -194,11 +204,11 @@ async function fetchStocks() {
             allStocks = data.data || [];
             if (data.favs) {
                 favorites = data.favs;
-                localStorage.setItem('SP_FAVS', JSON.stringify(favorites));
+                safeSet('SP_FAVS', JSON.stringify(favorites));
             }
             if (data.watch) {
                 watchlist = data.watch;
-                localStorage.setItem('SP_WATCH', JSON.stringify(watchlist));
+                safeSet('SP_WATCH', JSON.stringify(watchlist));
             }
             buildSectorTabs();
             renderList();
@@ -403,7 +413,7 @@ function toggleFavorite(symbol) {
     const idx = favorites.indexOf(symbol);
     if (idx === -1) favorites.push(symbol);
     else favorites.splice(idx, 1);
-    localStorage.setItem('SP_FAVS', JSON.stringify(favorites));
+    safeSet('SP_FAVS', JSON.stringify(favorites));
     syncFavWatchToBackend();
 }
 
@@ -411,7 +421,7 @@ function toggleWatchlist(symbol) {
     const idx = watchlist.indexOf(symbol);
     if (idx === -1) watchlist.push(symbol);
     else watchlist.splice(idx, 1);
-    localStorage.setItem('SP_WATCH', JSON.stringify(watchlist));
+    safeSet('SP_WATCH', JSON.stringify(watchlist));
     syncFavWatchToBackend();
 }
 
@@ -437,8 +447,11 @@ function openDetail(symbol) {
     idxBadge.className = 'badge ' + (stock.index === 'NASDAQ100' ? 'idx-nq' : stock.index === 'Both' ? 'idx-both' : 'idx-sp');
     
     document.getElementById('d-price').textContent = stock.price ? '$' + stock.price.toFixed(2) : '—';
-    document.getElementById('d-change').textContent = '—';
+    document.getElementById('d-change').textContent = '-';
     document.getElementById('d-change').className = 'price-change mono';
+    
+    document.getElementById('d-ext-price').style.display = 'none';
+    document.getElementById('d-ext-price').textContent = '';
     
     const isFav = favorites.includes(symbol);
     const favBtn = document.getElementById('d-fav-btn');
@@ -688,6 +701,35 @@ async function loadChartData() {
                     document.getElementById('d-day-low').textContent = `—`;
                     document.getElementById('d-day-high').textContent = `—`;
                     document.getElementById('d-day-marker').style.left = `50%`;
+                }
+                
+                if (data.summary) {
+                    document.getElementById('d-desc').innerHTML = data.summary.desc || 'ไม่มีข้อมูล';
+                    document.getElementById('d-rating').textContent = data.summary.rating || 'N/A';
+                    
+                    // --- Pre/Post Market Price Update ---
+                    if (data.summary.extPrice) {
+                        const ext = data.summary.extPrice;
+                        const extEl = document.getElementById('d-ext-price');
+                        if (ext.state === 'PRE' || ext.state === 'PREPRE') {
+                            if (ext.prePrice) {
+                                const changeStr = ext.preChange ? ` (${ext.preChange})` : '';
+                                extEl.textContent = `Pre-Market: $${ext.prePrice}${changeStr}`;
+                                extEl.style.display = 'block';
+                                extEl.className = 'pm-change mono ' + (ext.preChange && ext.preChange.startsWith('-') ? 'down' : 'up');
+                            }
+                        } else if (ext.state === 'POST' || ext.state === 'POSTPOST' || ext.state === 'CLOSED') {
+                            if (ext.postPrice) {
+                                const changeStr = ext.postChange ? ` (${ext.postChange})` : '';
+                                extEl.textContent = `Post-Market: $${ext.postPrice}${changeStr}`;
+                                extEl.style.display = 'block';
+                                extEl.className = 'pm-change mono ' + (ext.postChange && ext.postChange.startsWith('-') ? 'down' : 'up');
+                            }
+                        }
+                    }
+                    
+                    if (data.summary.fundamentals) {
+                    }
                 }
             }
             
