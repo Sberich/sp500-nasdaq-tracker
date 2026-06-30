@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     /* Premium Dashboard Variables */
     --pm-card-bg: #111419;
     --pm-border: #2a313c;
@@ -832,7 +832,7 @@ input {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--pm-border);
-    padding-bottom: 8px;
+    padding: 12px 0;
     width: 100%;
 }
 .pm-row:last-child { border-bottom: none; }
@@ -980,7 +980,7 @@ input {
 .hero-center, .hero-right-col {
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 0 !important;
     min-width: 240px !important;
     padding: 0 !important;
     border-right: none !important;

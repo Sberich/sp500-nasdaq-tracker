@@ -604,10 +604,10 @@ function renderSummary(summary) {
 
         heroFundBox.innerHTML = `
             ${(f.extPrice != null && f.extChangePct != null) ? `
-            <div class="pm-row pm-ext-row" style="padding-bottom: 8px; border-bottom: none; justify-content: flex-end;">
+            <div class="pm-row pm-ext-row" style="border-bottom: none; justify-content: flex-end;">
                 <div class="pm-val ${f.extChangePct >= 0 ? 'ext-green' : 'ext-red'}">${f.extType === 'PRE' ? '☀️ PRE-MARKET' : '🌙 AFTER-HOURS'}: $${f.extPrice.toFixed(2)} (${f.extChangePct > 0 ? '+' : ''}${f.extChangePct.toFixed(2)}%)</div>
             </div>` : ''}
-            <div class="pm-row" style="padding-bottom: 12px;">
+            <div class="pm-row">
                 <div class="pm-label">TARGET</div>
                 <div class="pm-val target-val-group" style="flex-wrap: wrap; gap: 4px;">
                     <span class="target-val-text">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</span>
