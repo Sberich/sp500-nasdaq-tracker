@@ -212,12 +212,46 @@ async function fetchStocks() {
             }
             buildSectorTabs();
             renderList();
+            
+            // Asynchronously fetch Pre/Post Market prices to not block UI
+            fetchAsyncExtPrices();
         } else {
             showErrorList(data.error || 'Failed to load data');
         }
     } catch (err) {
         showErrorList('Network Error. Please check API URL. ' + err.message);
         if(!API_URL) showConfigModal();
+    }
+}
+
+async function fetchAsyncExtPrices() {
+    try {
+        // Collect visible symbols or a subset to not overload. Here we take all regular symbols.
+        const symbols = allStocks.map(s => s.symbol).filter(s => !s.includes('.BK') && !s.startsWith('GPF'));
+        if (symbols.length === 0) return;
+        
+        // Since URL can be long, maybe batch it, but 500 symbols is around 2.5KB which is fine for GET.
+        // Actually to be safe we can just let backend read from sheet again or we pass symbols.
+        const res = await fetch(`${API_URL}?action=getBulkExtPrices&symbols=${symbols.join(',')}`);
+        const result = await res.json();
+        
+        if (result.success && result.data) {
+            const extMap = result.data;
+            let updated = false;
+            for (const s of allStocks) {
+                if (extMap[s.symbol]) {
+                    s.extPrice = extMap[s.symbol].extPrice;
+                    s.extChangePct = extMap[s.symbol].extChangePct;
+                    s.extType = extMap[s.symbol].extType;
+                    updated = true;
+                }
+            }
+            if (updated) {
+                renderList(); // Re-render list to show prices
+            }
+        }
+    } catch(e) {
+        console.error("Failed to fetch async ext prices", e);
     }
 }
 
@@ -393,7 +427,7 @@ function createStockCard(s) {
             <div class="sc-top">
                 <div style="display:flex; align-items:baseline; gap:6px;">
                     <span class="sc-symbol">${s.symbol}</span>
-                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${s.extChangePct >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${s.extPrice.toFixed(2)} (${s.extChangePct > 0 ? '+' : ''}${s.extChangePct.toFixed(2)}%)</span>` : ''}
+                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
                 </div>
                 <span class="sc-price mono">${priceStr}</span>
             </div>
@@ -487,8 +521,7 @@ function openDetail(symbol) {
     
     currentLevelsData = null;
     
-    loadLiveLevels();
-    loadChartData();
+    Promise.all([loadLiveLevels(), loadChartData()]).catch(e => console.error("Error loading detail:", e));
 }
 
 async function loadLiveLevels() {
@@ -708,23 +741,15 @@ async function loadChartData() {
                     document.getElementById('d-rating').textContent = data.summary.rating || 'N/A';
                     
                     // --- Pre/Post Market Price Update ---
-                    if (data.summary.extPrice) {
-                        const ext = data.summary.extPrice;
+                    const f = data.summary.fundamentals;
+                    if (f && f.extPrice != null && f.extChangePct != null) {
                         const extEl = document.getElementById('d-ext-price');
-                        if (ext.state === 'PRE' || ext.state === 'PREPRE') {
-                            if (ext.prePrice) {
-                                const changeStr = ext.preChange ? ` (${ext.preChange})` : '';
-                                extEl.textContent = `Pre-Market: $${ext.prePrice}${changeStr}`;
-                                extEl.style.display = 'block';
-                                extEl.className = 'pm-change mono ' + (ext.preChange && ext.preChange.startsWith('-') ? 'down' : 'up');
-                            }
-                        } else if (ext.state === 'POST' || ext.state === 'POSTPOST' || ext.state === 'CLOSED') {
-                            if (ext.postPrice) {
-                                const changeStr = ext.postChange ? ` (${ext.postChange})` : '';
-                                extEl.textContent = `Post-Market: $${ext.postPrice}${changeStr}`;
-                                extEl.style.display = 'block';
-                                extEl.className = 'pm-change mono ' + (ext.postChange && ext.postChange.startsWith('-') ? 'down' : 'up');
-                            }
+                        if (extEl) {
+                            const label = f.extType === 'PRE' ? '☀️ Pre-Market' : '🌙 Post-Market';
+                            const sign = f.extChangePct > 0 ? '+' : '';
+                            extEl.textContent = `${label}: $${f.extPrice.toFixed(2)} (${sign}${f.extChangePct.toFixed(2)}%)`;
+                            extEl.style.display = 'block';
+                            extEl.className = 'pm-change mono ' + (f.extChangePct >= 0 ? 'up' : 'down');
                         }
                     }
                     
@@ -966,7 +991,7 @@ function createMoverCard(s) {
             <div class="sc-top">
                 <div style="display:flex; align-items:baseline; gap:6px;">
                     <span class="sc-symbol">${s.symbol}</span>
-                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${s.extChangePct >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${s.extPrice.toFixed(2)} (${s.extChangePct > 0 ? '+' : ''}${s.extChangePct.toFixed(2)}%)</span>` : ''}
+                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
                 </div>
                 <span class="sc-price mono">${priceStr}</span>
             </div>
@@ -1030,4 +1055,35 @@ function toggleLeftPanel() {
 
 function syncFavWatchToBackend() {
     fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.join(',')}&watch=${watchlist.join(',')}`).catch(e => console.log('Sync failed', e));
+}
+
+// Global Event Delegation for Stock List
+elStockList.addEventListener('click', (e) => {
+    const card = e.target.closest('.stock-card');
+    if (!card) return;
+    const symbol = card.dataset.symbol;
+    if (!symbol) return;
+    
+    if (e.target.closest('.sc-watch')) {
+        e.stopPropagation();
+        toggleWatchlist(symbol);
+        return;
+    }
+    if (e.target.closest('.sc-fav')) {
+        e.stopPropagation();
+        toggleFavorite(symbol);
+        return;
+    }
+    openDetail(symbol);
+});
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('ServiceWorker registration successful');
+    }).catch(err => {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  });
 }
