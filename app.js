@@ -737,8 +737,11 @@ async function loadChartData() {
                 }
                 
                 if (data.summary) {
-                    document.getElementById('d-desc').innerHTML = data.summary.desc || 'ไม่มีข้อมูล';
-                    document.getElementById('d-rating').textContent = data.summary.rating || 'N/A';
+                    const descEl = document.getElementById('d-company-desc');
+                    if (descEl) {
+                        descEl.innerHTML = data.summary.desc || 'ไม่มีข้อมูล';
+                        descEl.style.display = 'block';
+                    }
                     
                     // --- Pre/Post Market Price Update ---
                     const f = data.summary.fundamentals;
@@ -762,10 +765,28 @@ async function loadChartData() {
             document.getElementById('ema-label').textContent = emaLabels || 'EMA';
             
             renderChart(data.points, data.emaData || [], data.currentPrice);
+        } else {
+            console.error("Chart API Error:", data.error);
+            const canvas = document.getElementById('priceChart');
+            if (priceChart) { priceChart.destroy(); }
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '14px Inter';
+            ctx.fillStyle = '#ef4444';
+            ctx.textAlign = 'center';
+            ctx.fillText('ไม่สามารถโหลดข้อมูลกราฟได้ (Yahoo API Error)', canvas.width/2, canvas.height/2);
         }
     } catch (err) {
         document.getElementById('chart-loading').classList.remove('active');
         console.error(err);
+        const canvas = document.getElementById('priceChart');
+        if (priceChart) { priceChart.destroy(); }
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '14px Inter';
+        ctx.fillStyle = '#ef4444';
+        ctx.textAlign = 'center';
+        ctx.fillText('เกิดข้อผิดพลาดในการโหลดกราฟ', canvas.width/2, canvas.height/2);
     }
 }
 
