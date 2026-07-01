@@ -8,6 +8,17 @@ function safeSet(key, val) {
     catch(e) { }
 }
 
+// --- XSS Protection ---
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // --- Constants & State ---
 let API_URL = safeGet('SP_API_URL', '') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
 let allStocks = [];
@@ -91,10 +102,12 @@ function setupEventListeners() {
         icon.classList.remove('rotating');
     });
 
-    // Search
+    // Search (debounced)
+    let _searchTimer = null;
     elSearchInput.addEventListener('input', () => {
         if (currentMover) return; // disable search in mover mode
-        renderList();
+        clearTimeout(_searchTimer);
+        _searchTimer = setTimeout(() => renderList(), 200);
     });
     
     // Index Tabs (ทั้งหมด, S&P500, NASDAQ, NYSE, โปรด)
@@ -256,7 +269,7 @@ async function fetchAsyncExtPrices() {
 }
 
 function showErrorList(msg) {
-    elStockList.innerHTML = `<div class="loader-container"><i class="ri-error-warning-line" style="font-size:32px;color:var(--red);"></i><p>${msg}</p></div>`;
+    elStockList.innerHTML = `<div class="loader-container"><i class="ri-error-warning-line" style="font-size:32px;color:var(--red);"></i><p>${escapeHtml(msg)}</p></div>`;
 }
 
 // --- List Rendering ---
@@ -276,8 +289,8 @@ function buildSectorTabs() {
     if (!select) return;
     
     select.innerHTML = sectors.map(s => 
-        `<option value="${s}" ${s === currentSector ? 'selected' : ''}>
-            ${s === 'ทั้งหมด' ? 'All Sectors (ทั้งหมด)' : s}
+        `<option value="${escapeHtml(s)}" ${s === currentSector ? 'selected' : ''}>
+            ${s === 'ทั้งหมด' ? 'All Sectors (ทั้งหมด)' : escapeHtml(s)}
         </option>`
     ).join('');
 }
@@ -411,32 +424,32 @@ function createStockCard(s) {
     else idxBadge = 'idx-sp';
 
     return `
-    <div class="stock-card ${colorClass} ${currentSymbol === s.symbol ? 'active' : ''}" data-symbol="${s.symbol}">
+    <div class="stock-card ${colorClass} ${currentSymbol === s.symbol ? 'active' : ''}" data-symbol="${escapeHtml(s.symbol)}">
         <div class="sc-logo-wrapper">
-            <button class="sc-watch ${isWatch ? 'is-watch' : ''}" data-symbol="${s.symbol}">
+            <button class="sc-watch ${isWatch ? 'is-watch' : ''}" data-symbol="${escapeHtml(s.symbol)}">
                 <i class="${isWatch ? 'ri-eye-fill' : 'ri-eye-line'}"></i>
             </button>
-            <button class="sc-star ${isFav ? 'is-fav' : ''}" data-symbol="${s.symbol}">
+            <button class="sc-star ${isFav ? 'is-fav' : ''}" data-symbol="${escapeHtml(s.symbol)}">
                 <i class="${isFav ? 'ri-star-fill' : 'ri-star-line'}"></i>
             </button>
             <img class="sc-logo" src="${logoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="sc-logo-fallback" style="display:none">${initials}</div>
+            <div class="sc-logo-fallback" style="display:none">${escapeHtml(initials)}</div>
         </div>
         
         <div class="sc-info">
             <div class="sc-top">
                 <div style="display:flex; align-items:baseline; gap:6px;">
-                    <span class="sc-symbol">${s.symbol}</span>
+                    <span class="sc-symbol">${escapeHtml(s.symbol)}</span>
                     ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
                 </div>
                 <span class="sc-price mono">${priceStr}</span>
             </div>
             <div class="sc-mid">
-                <span class="sc-name">${s.name || ''}</span>
+                <span class="sc-name">${escapeHtml(s.name || '')}</span>
                 <span class="sc-pct ${pctClass} mono">${pctStr}</span>
             </div>
             <div class="sc-bot">
-                <span class="badge ${idxBadge}">${s.index === 'Both' ? 'S&P+NQ' : (s.index || 'S&P500')}</span>
+                <span class="badge ${idxBadge}">${escapeHtml(s.index === 'Both' ? 'S&P+NQ' : (s.index || 'S&P500'))}</span>
                 ${levelsHtml}
             </div>
         </div>
@@ -537,7 +550,7 @@ async function loadLiveLevels() {
             }
             addChartAnnotations();
         } else {
-            document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-error-warning-line"></i> ${data.error}</p>`;
+            document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-error-warning-line"></i> ${escapeHtml(data.error)}</p>`;
             document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na">ไม่สามารถโหลดข้อมูล EMA</span>';
         }
     } catch (err) {
@@ -678,7 +691,7 @@ function renderSummary(summary) {
     // Company Description
     const descBox = document.getElementById('d-company-desc');
     if (summary.desc && descBox) {
-        descBox.innerHTML = `<h3><i class="ri-building-4-line"></i> About Company</h3><p>${summary.desc}</p>`;
+        descBox.innerHTML = `<h3><i class="ri-building-4-line"></i> About Company</h3><p>${escapeHtml(summary.desc)}</p>`;
         descBox.style.display = 'block';
     } else if (descBox) {
         descBox.style.display = 'none';
@@ -739,7 +752,7 @@ async function loadChartData() {
                 if (data.summary) {
                     const descEl = document.getElementById('d-company-desc');
                     if (descEl) {
-                        descEl.innerHTML = data.summary.desc || 'ไม่มีข้อมูล';
+                        descEl.innerHTML = escapeHtml(data.summary.desc || 'ไม่มีข้อมูล');
                         descEl.style.display = 'block';
                     }
                     
