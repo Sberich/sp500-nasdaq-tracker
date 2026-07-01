@@ -4,8 +4,11 @@ const ASSETS_TO_CACHE = [
   '/index.html',
   '/style.css',
   '/app.js',
-  'https://cdn.jsdelivr.net/npm/chart.js',
-  'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css'
+  'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js',
+  'https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js',
+  'https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js'
 ];
 
 self.addEventListener('install', (event) => {

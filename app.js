@@ -211,6 +211,7 @@ function setupEventListeners() {
 async function fetchStocks() {
     try {
         const res = await fetch(`${API_URL}?action=getStockList`);
+        if (!res.ok) throw new Error('API Error: ' + res.status);
         const data = await res.json();
         
         if (data.success) {
@@ -246,6 +247,7 @@ async function fetchAsyncExtPrices() {
         // Since URL can be long, maybe batch it, but 500 symbols is around 2.5KB which is fine for GET.
         // Actually to be safe we can just let backend read from sheet again or we pass symbols.
         const res = await fetch(`${API_URL}?action=getBulkExtPrices&symbols=${symbols.join(',')}`);
+        if (!res.ok) throw new Error('API Error: ' + res.status);
         const result = await res.json();
         
         if (result.success && result.data) {
@@ -366,35 +368,6 @@ function renderList() {
     elStatsBar.innerHTML = `แสดง <span>${stocks.length}</span> หุ้น · ใกล้ Support: <span style="color:var(--red)">${nearCount}</span> หุ้น`;
     
     elStockList.innerHTML = stocks.map(s => createStockCard(s)).join('');
-    
-    // Add click events to cards
-    document.querySelectorAll('.stock-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            // Prevent opening detail if clicking star
-            if(e.target.closest('.sc-star')) return;
-            
-            document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
-            card.classList.add('active');
-            openDetail(card.dataset.symbol);
-        });
-    });
-    
-    // Add click events to stars
-    document.querySelectorAll('.sc-star').forEach(star => {
-        star.addEventListener('click', (e) => {
-            const sym = e.currentTarget.dataset.symbol;
-            toggleFavorite(sym);
-            renderList();
-        });
-    });
-
-    document.querySelectorAll('.sc-watch').forEach(watch => {
-        watch.addEventListener('click', (e) => {
-            const sym = e.currentTarget.dataset.symbol;
-            toggleWatchlist(sym);
-            renderList();
-        });
-    });
 }
 
 function createStockCard(s) {
@@ -540,6 +513,7 @@ function openDetail(symbol) {
 async function loadLiveLevels() {
     try {
         const res = await fetch(`${API_URL}?action=getLiveLevels&symbol=${currentSymbol}`);
+        if (!res.ok) throw new Error('API Error: ' + res.status);
         const data = await res.json();
         
         if (data.success) {
@@ -704,6 +678,7 @@ async function loadChartData() {
     
     try {
         const res = await fetch(`${API_URL}?action=getStockChart&symbol=${currentSymbol}&range=${currentRange}`);
+        if (!res.ok) throw new Error('API Error: ' + res.status);
         const data = await res.json();
         
         document.getElementById('chart-loading').classList.remove('active');
@@ -966,6 +941,7 @@ async function fetchMarketMovers(scrId) {
     
     try {
         const res = await fetch(`${API_URL}?action=getMarketMovers&scrId=${scrId}`);
+        if (!res.ok) throw new Error('API Error: ' + res.status);
         const data = await res.json();
         
         if (data.success) {
@@ -991,15 +967,6 @@ function renderMoverList(data) {
     }
     
     elStockList.innerHTML = stocks.map(s => createMoverCard(s)).join('');
-    
-    // Click events for mover cards
-    document.querySelectorAll('.stock-card').forEach(card => {
-        card.addEventListener('click', () => {
-            document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
-            card.classList.add('active');
-            openDetail(card.dataset.symbol);
-        });
-    });
 }
 
 function createMoverCard(s) {
@@ -1088,7 +1055,9 @@ function toggleLeftPanel() {
 
 
 function syncFavWatchToBackend() {
-    fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.join(',')}&watch=${watchlist.join(',')}`).catch(e => console.log('Sync failed', e));
+    fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.join(',')}&watch=${watchlist.join(',')}`)
+        .then(res => { if (!res.ok) throw new Error('Sync API Error: ' + res.status); return res.json(); })
+        .catch(e => console.log('Sync failed', e));
 }
 
 // Global Event Delegation for Stock List
@@ -1101,13 +1070,18 @@ elStockList.addEventListener('click', (e) => {
     if (e.target.closest('.sc-watch')) {
         e.stopPropagation();
         toggleWatchlist(symbol);
+        if (!currentMover) renderList(); // Re-render if in normal list to update sort/filter
         return;
     }
-    if (e.target.closest('.sc-fav')) {
+    if (e.target.closest('.sc-star')) {
         e.stopPropagation();
         toggleFavorite(symbol);
+        if (!currentMover) renderList(); // Re-render if in normal list to update sort/filter
         return;
     }
+    
+    document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
     openDetail(symbol);
 });
 
