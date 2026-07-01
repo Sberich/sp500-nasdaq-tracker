@@ -832,7 +832,7 @@ input {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--pm-border);
-    padding: 4px 0;
+    padding: 2px 0;
     width: 100%;
 }
 .pm-row:last-child { border-bottom: none; }
@@ -852,7 +852,7 @@ input {
 }
 .pm-sell-btn { background: var(--pm-red-bg); color: var(--pm-red); border: 1px solid rgba(255, 59, 48, 0.2); }
 
-.pm-range-container { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.pm-range-container { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .pm-range-bar { flex: 1; height: 4px; background: var(--pm-border); border-radius: 2px; position: relative; }
 .pm-range-thumb { position: absolute; width: 8px; height: 8px; background: var(--pm-white); border-radius: 50%; top: -2px; left: 50%; box-shadow: 0 0 4px rgba(0,0,0,0.5); }
 .pm-range-val { font-size: 12px; font-weight: 600; color: var(--pm-white); }
@@ -960,11 +960,11 @@ input {
     background: var(--pm-card-bg) !important;
     border: 1px solid var(--pm-border) !important;
     border-radius: 12px !important;
-    padding: 12px 16px !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+    padding: 8px 12px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
     display: flex !important;
     flex-direction: row !important;
-    gap: 16px !important;
+    gap: 12px !important;
     align-items: stretch !important;
 }
 
@@ -973,19 +973,20 @@ input {
     flex-direction: column !important;
     align-items: center !important;
     flex: 1 !important;
-    min-width: 160px !important;
+    min-width: 0 !important;
     padding: 0 !important;
     border-right: none !important;
+    white-space: nowrap !important;
 }
 
 .hero-center, .hero-right-col {
     display: flex !important;
     flex-direction: column !important;
     gap: 0 !important;
-    flex: 1.2 !important;
-    min-width: 180px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
     padding: 0 !important;
-    border-right: none !important;
+    white-space: nowrap !important;
 }
 
 .pm-divider {
