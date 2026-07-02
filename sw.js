@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sp-screener-v6';
+const CACHE_NAME = 'sp-screener-v8';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

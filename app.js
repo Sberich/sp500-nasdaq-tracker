@@ -531,7 +531,7 @@ function createStockCard(s) {
             <button class="sc-star ${isFav ? 'is-fav' : ''}" data-symbol="${escapeHtml(s.symbol)}">
                 <i class="${isFav ? 'ri-star-fill' : 'ri-star-line'}"></i>
             </button>
-            <img class="sc-logo" src="${logoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <img class="sc-logo" src="${logoUrl}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
             <div class="sc-logo-fallback" style="display:none">${escapeHtml(initials)}</div>
         </div>
         
@@ -543,7 +543,6 @@ function createStockCard(s) {
                 </div>
                 <div style="display:flex; align-items:center;">
                     <span class="sc-price mono">${priceStr}</span>
-                    ${s.regChangePct != null ? `<span class="${s.regChangePct >= 0 ? 'pm-val-green' : 'pm-val-red'} mono" style="font-size: 11px; margin-left: 6px;">${s.regChangePct > 0 ? '+' : ''}${s.regChangePct.toFixed(2)}%</span>` : ''}
                 </div>
             </div>
             <div class="sc-mid">
@@ -1113,7 +1112,7 @@ function createMoverCard(s) {
     return `
     <div class="stock-card" data-symbol="${s.symbol}">
         <div class="sc-logo-wrapper">
-            <img class="sc-logo" src="${logoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <img class="sc-logo" src="${logoUrl}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
             <div class="sc-logo-fallback" style="display:none">${initials}</div>
         </div>
         
