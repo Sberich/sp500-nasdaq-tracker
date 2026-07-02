@@ -1052,8 +1052,8 @@ input {
     background: rgba(20, 20, 22, 0.95);
     border-bottom: 1px solid var(--border);
     padding: 10px 4px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 6px;
     animation: slideDown 0.2s ease-out forwards;
     transform-origin: top;
