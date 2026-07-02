@@ -29,6 +29,7 @@ let currentRange = '1M';
 let currentSector = 'ทั้งหมด';
 let currentIndex = 'all';
 let priceChart = null;
+let latestChartArgs = null;
 let currentLevelsData = null;
 let currentScreener = null;
 let currentCapFilter = 'ALL';
@@ -65,7 +66,9 @@ function initTheme() {
         const next = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         safeSet('SP_THEME', next);
-        if (priceChart) priceChart.update(); // Update chart colors
+        if (priceChart && latestChartArgs) {
+            renderChart(latestChartArgs.points, latestChartArgs.emaData, latestChartArgs.livePrice);
+        }
     });
 }
 
@@ -248,7 +251,7 @@ async function fetchAsyncQuotes() {
         const symbols = allStocks.map(s => s.symbol).filter(s => !s.includes('.BK') && !s.startsWith('GPF'));
         if (symbols.length === 0) return;
         
-        const res = await fetch(`${API_URL}?action=getBulkQuotes&symbols=${symbols.join(',')}`);
+        const res = await fetch(`${API_URL}?action=getBulkQuotes&symbols=${symbols.map(encodeURIComponent).join(',')}`);
         if (!res.ok) throw new Error('API Error: ' + res.status);
         const result = await res.json();
         
@@ -639,10 +642,13 @@ function openDetail(symbol) {
 }
 
 async function loadLiveLevels() {
+    const requestedSymbol = currentSymbol;
     try {
-        const res = await fetch(`${API_URL}?action=getLiveLevels&symbol=${currentSymbol}`);
+        const res = await fetch(`${API_URL}?action=getLiveLevels&symbol=${encodeURIComponent(requestedSymbol)}`);
         if (!res.ok) throw new Error('API Error: ' + res.status);
         const data = await res.json();
+        
+        if (currentSymbol !== requestedSymbol) return;
         
         if (data.success) {
             currentLevelsData = data;
@@ -740,13 +746,12 @@ function renderSummary(summary) {
     const heroFundBox = document.getElementById('d-hero-fundamentals');
     if (summary.fundamentals && heroFundBox) {
         const f = summary.fundamentals;
-        const upsideColor = f.upsideRaw > 0 ? 'text-green' : (f.upsideRaw < 0 ? 'text-red' : '');
-        
         let ratingBadge = '';
         if (summary.rating) {
             const r = summary.rating.replace(/_/g, ' ').toUpperCase();
-            let colorClass = 'pm-sell-btn'; // Default or hold
+            let colorClass = 'pm-sell-btn'; // Default
             if (r.includes('BUY')) colorClass = 'pm-buy-btn';
+            else if (r.includes('HOLD')) colorClass = 'pm-hold-btn';
             ratingBadge = `<span class="${colorClass}">${r}</span>`;
         }
 
@@ -803,11 +808,15 @@ function renderSummary(summary) {
 // --- Chart ---
 async function loadChartData() {
     document.getElementById('chart-loading').classList.add('active');
+    const requestedSymbol = currentSymbol;
+    const requestedRange = currentRange;
     
     try {
-        const res = await fetch(`${API_URL}?action=getStockChart&symbol=${currentSymbol}&range=${currentRange}`);
+        const res = await fetch(`${API_URL}?action=getStockChart&symbol=${encodeURIComponent(requestedSymbol)}&range=${requestedRange}`);
         if (!res.ok) throw new Error('API Error: ' + res.status);
         const data = await res.json();
+        
+        if (currentSymbol !== requestedSymbol || currentRange !== requestedRange) return;
         
         document.getElementById('chart-loading').classList.remove('active');
         
@@ -880,6 +889,7 @@ async function loadChartData() {
             const emaLabels = (data.emaData || []).map(e => `EMA${e.period}`).join(', ');
             document.getElementById('ema-label').textContent = emaLabels || 'EMA';
             
+            latestChartArgs = { points: data.points, emaData: data.emaData || [], livePrice: data.currentPrice };
             renderChart(data.points, data.emaData || [], data.currentPrice);
         } else {
             console.error("Chart API Error:", data.error);
@@ -1110,22 +1120,22 @@ function createMoverCard(s) {
     const initials = s.symbol.substring(0, 3);
     
     return `
-    <div class="stock-card" data-symbol="${s.symbol}">
+    <div class="stock-card" data-symbol="${escapeHtml(s.symbol)}">
         <div class="sc-logo-wrapper">
             <img class="sc-logo" src="${logoUrl}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="sc-logo-fallback" style="display:none">${initials}</div>
+            <div class="sc-logo-fallback" style="display:none">${escapeHtml(initials)}</div>
         </div>
         
         <div class="sc-info">
             <div class="sc-top">
                 <div style="display:flex; align-items:baseline; gap:6px;">
-                    <span class="sc-symbol">${s.symbol}</span>
+                    <span class="sc-symbol">${escapeHtml(s.symbol)}</span>
                     ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
                 </div>
                 <span class="sc-price mono">${priceStr}</span>
             </div>
             <div class="sc-mid">
-                <span class="sc-name">${s.name || ''}</span>
+                <span class="sc-name">${escapeHtml(s.name || '')}</span>
                 <span class="sc-pct ${colorClass} mono">${pctStr}</span>
             </div>
             <div class="sc-bot">
@@ -1183,7 +1193,7 @@ function toggleLeftPanel() {
 
 
 function syncFavWatchToBackend() {
-    fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.join(',')}&watch=${watchlist.join(',')}`)
+    fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.map(encodeURIComponent).join(',')}&watch=${watchlist.map(encodeURIComponent).join(',')}`)
         .then(res => { if (!res.ok) throw new Error('Sync API Error: ' + res.status); return res.json(); })
         .catch(e => console.log('Sync failed', e));
 }
