@@ -2,7 +2,7 @@
   "name": "AlphaZone",
   "short_name": "AlphaZone",
   "description": "S&P500 & NASDAQ100 Analysis Dashboard",
-  "start_url": "./index.html",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#121212",

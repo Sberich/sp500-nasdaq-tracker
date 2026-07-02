@@ -491,7 +491,7 @@ function renderList() {
     }
     
     const nearCount = stocks.filter(s => s.pctS1 != null && Math.abs(s.pctS1 * 100) < 5).length;
-    elStatsBar.innerHTML = `แสดง <span>${stocks.length}</span> หุ้น · ใกล้ Support: <span style="color:var(--red)">${nearCount}</span> หุ้น`;
+    elStatsBar.innerHTML = `<span>${stocks.length}</span> ตัว &middot; ใกล้ S1: <span style="color:var(--red)">${nearCount}</span>`;
     
     elStockList.innerHTML = stocks.map(s => createStockCard(s)).join('');
 }
@@ -1088,7 +1088,7 @@ function renderMoverList(data) {
     const stocks = data.data || [];
     const titleMap = { day_gainers: '🚀 Top Gainers', day_losers: '📉 Top Losers', most_actives: '🔥 Most Active', trending_now: '📈 Trending Now' };
     
-    elStatsBar.innerHTML = `<span>${titleMap[data.scrId] || ''}</span> · ${stocks.length} หุ้น · อัปเดต: ${data.fetchTime || ''}`;
+    elStatsBar.innerHTML = `<span>${titleMap[data.scrId] || ''}</span> &middot; ${stocks.length} ตัว`;
     
     if (!stocks.length) {
         elStockList.innerHTML = `<div class="loader-container"><p>ไม่พบข้อมูล</p></div>`;
