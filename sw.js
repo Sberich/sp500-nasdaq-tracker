@@ -32,14 +32,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('script.google.com') || event.request.url.includes('googleusercontent.com')) {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return new Response(JSON.stringify({ error: "Offline Mode" }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
+  // Ignore API calls to Google Apps Script and Yahoo Finance to prevent Safari redirect/CORS issues
+  if (event.request.url.includes('script.google.com') || event.request.url.includes('googleusercontent.com') || event.request.url.includes('yahoo.com')) {
     return;
   }
   event.respondWith(
