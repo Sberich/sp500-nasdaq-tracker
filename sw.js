@@ -1,4 +1,4 @@
-const CACHE_NAME = 'alphazone-pwa-v2';
+const CACHE_NAME = 'sp-screener-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
