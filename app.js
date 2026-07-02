@@ -30,6 +30,10 @@ let currentSector = 'ทั้งหมด';
 let currentIndex = 'all';
 let priceChart = null;
 let currentLevelsData = null;
+let currentScreener = null;
+let currentCapFilter = 'ALL';
+let currentTrendFilter = 'ALL';
+let currentVolFilter = 'ALL';
 
 // --- DOM Elements ---
 const elStockList = document.getElementById('stock-list');
@@ -227,8 +231,8 @@ async function fetchStocks() {
             buildSectorTabs();
             renderList();
             
-            // Asynchronously fetch Pre/Post Market prices to not block UI
-            fetchAsyncExtPrices();
+            // Asynchronously fetch Pre/Post Market prices and Market Cap to not block UI
+            fetchAsyncQuotes();
         } else {
             showErrorList(data.error || 'Failed to load data');
         }
@@ -238,15 +242,13 @@ async function fetchStocks() {
     }
 }
 
-async function fetchAsyncExtPrices() {
+async function fetchAsyncQuotes() {
     try {
         // Collect visible symbols or a subset to not overload. Here we take all regular symbols.
         const symbols = allStocks.map(s => s.symbol).filter(s => !s.includes('.BK') && !s.startsWith('GPF'));
         if (symbols.length === 0) return;
         
-        // Since URL can be long, maybe batch it, but 500 symbols is around 2.5KB which is fine for GET.
-        // Actually to be safe we can just let backend read from sheet again or we pass symbols.
-        const res = await fetch(`${API_URL}?action=getBulkExtPrices&symbols=${symbols.join(',')}`);
+        const res = await fetch(`${API_URL}?action=getBulkQuotes&symbols=${symbols.join(',')}`);
         if (!res.ok) throw new Error('API Error: ' + res.status);
         const result = await res.json();
         
@@ -255,23 +257,107 @@ async function fetchAsyncExtPrices() {
             let updated = false;
             for (const s of allStocks) {
                 if (extMap[s.symbol]) {
-                    s.extPrice = extMap[s.symbol].extPrice;
-                    s.extChangePct = extMap[s.symbol].extChangePct;
-                    s.extType = extMap[s.symbol].extType;
+                    const q = extMap[s.symbol];
+                    if (q.marketCap) s.marketCap = q.marketCap;
+                    if (q.volume) s.volume = q.volume;
+                    if (q.avgVolume) s.avgVolume = q.avgVolume;
+                    if (q.regChangePct != null) s.regChangePct = q.regChangePct;
+                    if (q.dayHigh != null) s.dayHigh = q.dayHigh;
+                    if (extMap[s.symbol].extPrice) {
+                        s.extPrice = extMap[s.symbol].extPrice;
+                        s.extChangePct = extMap[s.symbol].extChangePct;
+                        s.extType = extMap[s.symbol].extType;
+                    }
                     updated = true;
                 }
             }
             if (updated) {
-                renderList(); // Re-render list to show prices
+                renderList(); // Re-render list to show prices and apply any active screener
             }
         }
     } catch(e) {
-        console.error("Failed to fetch async ext prices", e);
+        console.error("Failed to fetch async quotes", e);
     }
 }
 
 function showErrorList(msg) {
     elStockList.innerHTML = `<div class="loader-container"><i class="ri-error-warning-line" style="font-size:32px;color:var(--red);"></i><p>${escapeHtml(msg)}</p></div>`;
+}
+
+// --- Screener Logic ---
+function toggleScreener() {
+    const panel = document.getElementById('screener-panel');
+    const btn = document.getElementById('screener-toggle-btn');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'flex';
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="ri-filter-3-fill"></i>';
+    } else {
+        panel.style.display = 'none';
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="ri-filter-3-line"></i>';
+    }
+}
+
+function updateScreenerBadge() {
+    const btn = document.getElementById('screener-toggle-btn');
+    if (!btn) return;
+    if (currentScreener || currentCapFilter !== 'ALL') {
+        btn.style.color = 'var(--primary)';
+        btn.style.borderColor = 'var(--primary)';
+    } else {
+        btn.style.color = '';
+        btn.style.borderColor = '';
+    }
+}
+
+function applyScreener(preset) {
+    currentScreener = currentScreener === preset ? null : preset;
+    document.querySelectorAll('#sc-buy_dip, #sc-breakout, #sc-upside, #sc-day_high').forEach(btn => btn.classList.remove('active'));
+    if (currentScreener) {
+        document.getElementById('sc-' + preset).classList.add('active');
+    }
+    updateScreenerBadge();
+    renderList();
+}
+
+function setTrendFilter(trend) {
+    currentTrendFilter = trend;
+    document.querySelectorAll('.trend-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('trend-' + trend).classList.add('active');
+    updateScreenerBadge();
+    renderList();
+}
+
+function setVolFilter(vol) {
+    currentVolFilter = vol;
+    document.querySelectorAll('.vol-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('vol-' + vol).classList.add('active');
+    updateScreenerBadge();
+    renderList();
+}
+
+function setCapFilter(cap) {
+    currentCapFilter = cap;
+    document.querySelectorAll('.cap-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('cap-' + cap).classList.add('active');
+    updateScreenerBadge();
+    renderList();
+}
+
+function clearScreener() {
+    currentScreener = null;
+    currentCapFilter = 'ALL';
+    currentTrendFilter = 'ALL';
+    currentVolFilter = 'ALL';
+    document.querySelectorAll('#screener-panel .sc-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById('cap-ALL')?.classList.add('active');
+    document.getElementById('trend-ALL')?.classList.add('active');
+    document.getElementById('vol-ALL')?.classList.add('active');
+    
+    updateScreenerBadge();
+    renderList();
 }
 
 // --- List Rendering ---
@@ -325,7 +411,47 @@ function renderList() {
           if (currentIndex === 'NASDAQ100' && s.index !== 'NASDAQ100' && s.index !== 'Both') return false;
           if (currentIndex !== 'all' && currentIndex !== '7MAG' && currentIndex !== 'S&P500' && currentIndex !== 'NASDAQ100' && s.index !== currentIndex) return false;
         if (currentSector !== 'ทั้งหมด' && s.sector !== currentSector) return false;
-        if (query) return s.symbol.includes(query) || (s.name || '').toUpperCase().includes(query);
+        if (query) {
+            if (!(s.symbol.includes(query) || (s.name || '').toUpperCase().includes(query))) return false;
+        }
+        
+        // Screener Filters
+        if (currentTrendFilter !== 'ALL') {
+            const trendStr = (s.status || '').toLowerCase();
+            if (currentTrendFilter === 'BULL' && !trendStr.includes('up')) return false;
+            if (currentTrendFilter === 'BEAR' && !trendStr.includes('down')) return false;
+            if (currentTrendFilter === 'SIDEWAYS' && !trendStr.includes('sideways')) return false;
+        }
+        
+        if (currentVolFilter === 'HIGH') {
+            if (!s.volume || !s.avgVolume || s.volume < s.avgVolume * 1.0) return false;
+        }
+        
+        if (currentCapFilter !== 'ALL') {
+            const cap = Number(s.marketCap) || 0;
+            if (currentCapFilter === 'MEGA' && cap < 200000000000) return false;
+            if (currentCapFilter === 'LARGE' && (cap < 10000000000 || cap >= 200000000000)) return false;
+            if (currentCapFilter === 'MID' && (cap < 2000000000 || cap >= 10000000000)) return false;
+            if (currentCapFilter === 'SMALL' && cap >= 2000000000) return false;
+        }
+        
+        if (currentScreener === 'buy_dip') {
+            const pS1 = s.pctS1 != null ? s.pctS1 : -999;
+            const pS2 = s.pctS2 != null ? s.pctS2 : -999;
+            if (!((pS1 >= -0.03 && pS1 <= 0.03) || (pS2 >= -0.03 && pS2 <= 0.03))) return false;
+        } else if (currentScreener === 'breakout') {
+            const pR1 = s.pctR1 != null ? s.pctR1 : 999;
+            const pR2 = s.pctR2 != null ? s.pctR2 : 999;
+            if (!((pR1 >= -0.05 && pR1 <= 0.05) || (pR2 >= -0.05 && pR2 <= 0.05))) return false;
+        } else if (currentScreener === 'upside') {
+            const pR1 = s.pctR1 != null ? s.pctR1 : 0;
+            if (pR1 < 0.10) return false;
+        } else if (currentScreener === 'day_high') {
+            if (!s.dayHigh || !s.price) return false;
+            const distToHigh = (s.price - s.dayHigh) / s.dayHigh;
+            if (distToHigh < -0.015) return false; // Must be within 1.5% of Day High
+        }
+        
         return true;
     });
     
@@ -364,7 +490,7 @@ function renderList() {
         return;
     }
     
-    const nearCount = stocks.filter(s => s.pctS1 != null && Math.abs(s.pctS1) < 5).length;
+    const nearCount = stocks.filter(s => s.pctS1 != null && Math.abs(s.pctS1 * 100) < 5).length;
     elStatsBar.innerHTML = `แสดง <span>${stocks.length}</span> หุ้น · ใกล้ Support: <span style="color:var(--red)">${nearCount}</span> หุ้น`;
     
     elStockList.innerHTML = stocks.map(s => createStockCard(s)).join('');
@@ -415,7 +541,10 @@ function createStockCard(s) {
                     <span class="sc-symbol">${escapeHtml(s.symbol)}</span>
                     ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
                 </div>
-                <span class="sc-price mono">${priceStr}</span>
+                <div style="display:flex; align-items:center;">
+                    <span class="sc-price mono">${priceStr}</span>
+                    ${s.regChangePct != null ? `<span class="${s.regChangePct >= 0 ? 'pm-val-green' : 'pm-val-red'} mono" style="font-size: 11px; margin-left: 6px;">${s.regChangePct > 0 ? '+' : ''}${s.regChangePct.toFixed(2)}%</span>` : ''}
+                </div>
             </div>
             <div class="sc-mid">
                 <span class="sc-name">${escapeHtml(s.name || '')}</span>

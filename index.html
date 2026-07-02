@@ -105,10 +105,15 @@
                     <div class="filter-group">
                         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="filter-label" style="margin-bottom:0;">MARKETS</div>
-                                <button id="sort-btn" onclick="toggleSort()" class="tab-btn" style="padding:2px 8px; font-size:11px; margin:0; min-height:auto; height:22px;" title="เปลี่ยนวิธีเรียงลำดับ">
-                                    <i class="ri-magic-line"></i> Auto
-                                </button>
+                                <div class="filter-label" style="margin-bottom:0; margin-right:4px;">MARKETS</div>
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <button id="screener-toggle-btn" onclick="toggleScreener()" class="tab-btn" style="padding:2px 6px; font-size:12px; margin:0; min-height:auto; height:22px;" title="คัดกรองหุ้น">
+                                        <i class="ri-filter-3-line"></i>
+                                    </button>
+                                    <button id="sort-btn" onclick="toggleSort()" class="tab-btn" style="padding:2px 8px; font-size:11px; margin:0; min-height:auto; height:22px;" title="เปลี่ยนวิธีเรียงลำดับ">
+                                        <i class="ri-magic-line"></i> Auto
+                                    </button>
+                                </div>
                             </div>
                             <div class="stats-bar" id="stats-bar" style="padding:0;">
                                 <!-- Stats populated dynamically -->
@@ -124,6 +129,48 @@
                             <button class="tab-btn" data-idx="fav"><i class="ri-star-fill"></i> โปรด</button>
                             <button class="tab-btn" data-idx="watch"><i class="ri-eye-fill"></i> จับตา</button>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Screener Panel (Hidden by default) -->
+                <div class="screener-panel glass" id="screener-panel" style="display:none;">
+                    <div class="sc-group">
+                        <div class="sc-label">สูตรสแกน (Presets)</div>
+                        <div class="sc-options" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+                            <button class="sc-btn" id="sc-buy_dip" onclick="applyScreener('buy_dip')" style="padding: 6px 2px; font-size: 11px;">🟢 Buy Dip</button>
+                            <button class="sc-btn" id="sc-breakout" onclick="applyScreener('breakout')" style="padding: 6px 2px; font-size: 11px;">🚀 Breakout</button>
+                            <button class="sc-btn" id="sc-upside" onclick="applyScreener('upside')" style="padding: 6px 2px; font-size: 11px;">💎 Upside</button>
+                            <button class="sc-btn" id="sc-day_high" onclick="applyScreener('day_high')" style="padding: 6px 2px; font-size: 11px;">🔥 Day High</button>
+                        </div>
+                    </div>
+                    <div class="sc-group">
+                        <div class="sc-label">แนวโน้ม (Trend)</div>
+                        <div class="sc-options">
+                            <button class="sc-btn trend-btn active" id="trend-ALL" onclick="setTrendFilter('ALL')">ทั้งหมด</button>
+                            <button class="sc-btn trend-btn" id="trend-BULL" onclick="setTrendFilter('BULL')">📈 ขาขึ้น</button>
+                            <button class="sc-btn trend-btn" id="trend-BEAR" onclick="setTrendFilter('BEAR')">📉 ขาลง</button>
+                            <button class="sc-btn trend-btn" id="trend-SIDEWAYS" onclick="setTrendFilter('SIDEWAYS')">↔️ แกว่งตัว</button>
+                        </div>
+                    </div>
+                    <div class="sc-group">
+                        <div class="sc-label">ปริมาณซื้อขาย (Volume)</div>
+                        <div class="sc-options">
+                            <button class="sc-btn vol-btn active" id="vol-ALL" onclick="setVolFilter('ALL')">ทั้งหมด</button>
+                            <button class="sc-btn vol-btn" id="vol-HIGH" onclick="setVolFilter('HIGH')">🔥 High Volume</button>
+                        </div>
+                    </div>
+                    <div class="sc-group">
+                        <div class="sc-label">ขนาดบริษัท (Market Cap)</div>
+                        <div class="sc-options">
+                            <button class="sc-btn cap-btn active" id="cap-ALL" onclick="setCapFilter('ALL')">ทั้งหมด</button>
+                            <button class="sc-btn cap-btn" id="cap-MEGA" onclick="setCapFilter('MEGA')">Mega (>$200B)</button>
+                            <button class="sc-btn cap-btn" id="cap-LARGE" onclick="setCapFilter('LARGE')">Large (>$10B)</button>
+                            <button class="sc-btn cap-btn" id="cap-MID" onclick="setCapFilter('MID')">Mid (>$2B)</button>
+                            <button class="sc-btn cap-btn" id="cap-SMALL" onclick="setCapFilter('SMALL')">Small (<$2B)</button>
+                        </div>
+                    </div>
+                    <div class="sc-actions">
+                        <button class="sc-btn-clear" onclick="clearScreener()">ล้างตัวกรองทั้งหมด</button>
                     </div>
                 </div>
 
