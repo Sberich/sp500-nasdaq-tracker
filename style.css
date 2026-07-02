@@ -1045,3 +1045,97 @@ input {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+/* ------------------------------------------------------------
+   Screener Panel
+   ------------------------------------------------------------ */
+.screener-panel {
+    background: rgba(20, 20, 22, 0.95);
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    animation: slideDown 0.2s ease-out forwards;
+    transform-origin: top;
+    margin-bottom: 8px;
+    border-radius: 0 0 12px 12px;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: scaleY(0.9); }
+    to { opacity: 1; transform: scaleY(1); }
+}
+
+.sc-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sc-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sc-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.sc-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    flex: 1 1 auto;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.sc-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sc-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.sc-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    padding-top: 12px;
+    grid-column: 1 / -1;
+}
+
+.sc-btn-clear {
+    background: transparent;
+    border: none;
+    color: var(--red);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+.sc-btn-clear:hover {
+    background: rgba(255, 59, 48, 0.1);
+}
