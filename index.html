@@ -19,7 +19,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     
     <!-- Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=2.1">
 
     <!-- Chart.js & Plugins -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -136,11 +137,11 @@
                 <div class="screener-panel glass" id="screener-panel" style="display:none;">
                     <div class="sc-group">
                         <div class="sc-label">สูตรสแกน (Presets)</div>
-                        <div class="sc-options" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
-                            <button class="sc-btn" id="sc-buy_dip" onclick="applyScreener('buy_dip')" style="padding: 6px 2px; font-size: 11px;">🟢 Buy Dip</button>
-                            <button class="sc-btn" id="sc-breakout" onclick="applyScreener('breakout')" style="padding: 6px 2px; font-size: 11px;">🚀 Breakout</button>
-                            <button class="sc-btn" id="sc-upside" onclick="applyScreener('upside')" style="padding: 6px 2px; font-size: 11px;">💎 Upside</button>
-                            <button class="sc-btn" id="sc-day_high" onclick="applyScreener('day_high')" style="padding: 6px 2px; font-size: 11px;">🔥 Day High</button>
+                        <div class="sc-options" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            <button class="sc-btn" id="sc-buy_dip" onclick="applyScreener('buy_dip')" style="flex: 1 1 calc(25% - 8px); min-width: 65px; padding: 6px 2px; font-size: 11px;">🟢 Buy Dip</button>
+                            <button class="sc-btn" id="sc-breakout" onclick="applyScreener('breakout')" style="flex: 1 1 calc(25% - 8px); min-width: 65px; padding: 6px 2px; font-size: 11px;">🚀 Breakout</button>
+                            <button class="sc-btn" id="sc-upside" onclick="applyScreener('upside')" style="flex: 1 1 calc(25% - 8px); min-width: 65px; padding: 6px 2px; font-size: 11px;">💎 Upside</button>
+                            <button class="sc-btn" id="sc-day_high" onclick="applyScreener('day_high')" style="flex: 1 1 calc(25% - 8px); min-width: 65px; padding: 6px 2px; font-size: 11px;">🔥 Day High</button>
                         </div>
                     </div>
                     <div class="sc-group">
