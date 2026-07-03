@@ -94,19 +94,26 @@ let moverCache = {};
 
 function setupEventListeners() {
     // Refresh Button
+    let isRefreshing = false;
     document.getElementById('refresh-btn').addEventListener('click', async () => {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        
         const icon = document.querySelector('#refresh-btn i');
         icon.classList.add('rotating');
         
-        await fetchStocks();
-        if (currentSymbol) {
-            await Promise.all([
-                loadLiveLevels(),
-                loadChartData()
-            ]);
+        try {
+            await fetchStocks();
+            if (currentSymbol) {
+                await Promise.all([
+                    loadLiveLevels(),
+                    loadChartData()
+                ]);
+            }
+        } finally {
+            icon.classList.remove('rotating');
+            isRefreshing = false;
         }
-        
-        icon.classList.remove('rotating');
     });
 
     // Search (debounced)
@@ -245,41 +252,61 @@ async function fetchStocks() {
     }
 }
 
+let isFetchingQuotes = false;
 async function fetchAsyncQuotes() {
+    if (isFetchingQuotes) return;
+    isFetchingQuotes = true;
     try {
         // Collect visible symbols or a subset to not overload. Here we take all regular symbols.
         const symbols = allStocks.map(s => s.symbol).filter(s => !s.includes('.BK') && !s.startsWith('GPF'));
         if (symbols.length === 0) return;
         
-        const res = await fetch(`${API_URL}?action=getBulkQuotes&symbols=${symbols.map(encodeURIComponent).join(',')}`);
-        if (!res.ok) throw new Error('API Error: ' + res.status);
-        const result = await res.json();
+        const chunkSize = 50;
+        const chunks = [];
+        for (let i = 0; i < symbols.length; i += chunkSize) {
+            chunks.push(symbols.slice(i, i + chunkSize));
+        }
         
-        if (result.success && result.data) {
-            const extMap = result.data;
-            let updated = false;
-            for (const s of allStocks) {
-                if (extMap[s.symbol]) {
-                    const q = extMap[s.symbol];
-                    if (q.marketCap) s.marketCap = q.marketCap;
-                    if (q.volume) s.volume = q.volume;
-                    if (q.avgVolume) s.avgVolume = q.avgVolume;
-                    if (q.regChangePct != null) s.regChangePct = q.regChangePct;
-                    if (q.dayHigh != null) s.dayHigh = q.dayHigh;
-                    if (extMap[s.symbol].extPrice) {
-                        s.extPrice = extMap[s.symbol].extPrice;
-                        s.extChangePct = extMap[s.symbol].extChangePct;
-                        s.extType = extMap[s.symbol].extType;
-                    }
-                    updated = true;
-                }
-            }
-            if (updated) {
-                renderList(); // Re-render list to show prices and apply any active screener
+        const promises = chunks.map(async (chunk) => {
+            const res = await fetch(`${API_URL}?action=getBulkQuotes&symbols=${chunk.map(encodeURIComponent).join(',')}`);
+            if (!res.ok) throw new Error('API Error: ' + res.status);
+            return await res.json();
+        });
+        
+        const results = await Promise.all(promises);
+        
+        let extMap = {};
+        for (const r of results) {
+            if (r.success && r.data) {
+                Object.assign(extMap, r.data);
             }
         }
-    } catch(e) {
-        console.error("Failed to fetch async quotes", e);
+        
+        let updated = false;
+        for (const s of allStocks) {
+            if (extMap[s.symbol]) {
+                const q = extMap[s.symbol];
+                if (q.price) s.price = q.price;
+                if (q.marketCap) s.marketCap = q.marketCap;
+                if (q.volume) s.volume = q.volume;
+                if (q.avgVolume) s.avgVolume = q.avgVolume;
+                if (q.regChangePct != null) s.regChangePct = q.regChangePct;
+                if (q.dayHigh != null) s.dayHigh = q.dayHigh;
+                if (q.extPrice) {
+                    s.extPrice = q.extPrice;
+                    s.extChangePct = q.extChangePct;
+                    s.extType = q.extType;
+                }
+                updated = true;
+            }
+        }
+        if (updated) {
+            renderList(); // Re-render list to show prices and apply any active screener
+        }
+    } catch (err) {
+        console.error("Bulk Quotes Error:", err);
+    } finally {
+        isFetchingQuotes = false;
     }
 }
 
@@ -520,6 +547,12 @@ function createStockCard(s) {
     if (s.s1 != null) levelsHtml += `<span class="chip s">S1 ${s.s1.toFixed(0)}</span>`;
     if (s.r1 != null) levelsHtml += `<span class="chip r">R1 ${s.r1.toFixed(0)}</span>`;
     
+    let regPctStr = '';
+    if (s.regChangePct != null) {
+        const isUp = s.regChangePct >= 0;
+        regPctStr = `<span class="sc-pct ${isUp ? 'ok' : 'near'} mono">${isUp ? '+' : ''}${s.regChangePct.toFixed(2)}%</span>`;
+    }
+
     let idxBadge = '';
     if (s.index === 'NASDAQ100') idxBadge = 'idx-nq';
     else if (s.index === 'Both') idxBadge = 'idx-both';
@@ -542,7 +575,7 @@ function createStockCard(s) {
             <div class="sc-top">
                 <div style="display:flex; align-items:baseline; gap:6px;">
                     <span class="sc-symbol">${escapeHtml(s.symbol)}</span>
-                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
+                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? 'Pre' : 'Post'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
                 </div>
                 <div style="display:flex; align-items:center;">
                     <span class="sc-price mono">${priceStr}</span>
@@ -550,11 +583,14 @@ function createStockCard(s) {
             </div>
             <div class="sc-mid">
                 <span class="sc-name">${escapeHtml(s.name || '')}</span>
-                <span class="sc-pct ${pctClass} mono">${pctStr}</span>
+                ${regPctStr}
             </div>
-            <div class="sc-bot">
-                <span class="badge ${idxBadge}">${escapeHtml(s.index === 'Both' ? 'S&P+NQ' : (s.index || 'S&P500'))}</span>
-                ${levelsHtml}
+            <div class="sc-bot" style="justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:4px; align-items:center;">
+                    <span class="badge ${idxBadge}">${escapeHtml(s.index === 'Both' ? 'S&P+NQ' : (s.index || 'S&P500'))}</span>
+                    ${levelsHtml}
+                </div>
+                <span class="sc-pct ${pctClass} mono">${pctStr}</span>
             </div>
         </div>
     </div>`;
@@ -641,10 +677,17 @@ function openDetail(symbol) {
     Promise.all([loadLiveLevels(), loadChartData()]).catch(e => console.error("Error loading detail:", e));
 }
 
+let _levelsAbortController = null;
 async function loadLiveLevels() {
+    if (_levelsAbortController) {
+        _levelsAbortController.abort();
+    }
+    _levelsAbortController = new AbortController();
+    const signal = _levelsAbortController.signal;
+    
     const requestedSymbol = currentSymbol;
     try {
-        const res = await fetch(`${API_URL}?action=getLiveLevels&symbol=${encodeURIComponent(requestedSymbol)}`);
+        const res = await fetch(`${API_URL}?action=getLiveLevels&symbol=${encodeURIComponent(requestedSymbol)}`, { signal });
         if (!res.ok) throw new Error('API Error: ' + res.status);
         const data = await res.json();
         
@@ -662,7 +705,8 @@ async function loadLiveLevels() {
             document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na">ไม่สามารถโหลดข้อมูล EMA</span>';
         }
     } catch (err) {
-        document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-wifi-off-line"></i> การเชื่อมต่อขัดข้อง</p>`;
+        if (err.name === 'AbortError') return;
+        document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-wifi-off-line"></i> เกิดข้อผิดพลาดในการโหลดข้อมูล</p>`;
     }
 }
 
@@ -763,30 +807,30 @@ function renderSummary(summary) {
             <div class="pm-row">
                 <div class="pm-label">TARGET</div>
                 <div class="pm-val target-val-group" style="flex-wrap: wrap; gap: 4px;">
-                    <span class="target-val-text">${f.targetMeanPrice !== '-' ? '$' + f.targetMeanPrice : '-'}</span>
-                    <span class="target-upside-text ${f.upsideRaw > 0 ? 'pm-val-green' : 'pm-val-red'}">${f.upsideRaw > 0 ? '+' : ''}${f.upside}</span>
+                    <span class="target-val-text">${f.targetMeanPrice !== '-' ? '$' + escapeHtml(String(f.targetMeanPrice)) : '-'}</span>
+                    <span class="target-upside-text ${f.upsideRaw > 0 ? 'pm-val-green' : 'pm-val-red'}">${f.upsideRaw > 0 ? '+' : ''}${escapeHtml(String(f.upside))}</span>
                     ${ratingBadge}
                 </div>
             </div>
             <div class="pm-row">
                 <div class="pm-label">P/E RATIO</div>
-                <div class="pm-val">${f.trailingPE || f.pe}</div>
+                <div class="pm-val">${escapeHtml(String(f.trailingPE || f.pe))}</div>
             </div>
             <div class="pm-row">
                 <div class="pm-label">MARKET CAP</div>
-                <div class="pm-val">${f.marketCap}</div>
+                <div class="pm-val">${escapeHtml(String(f.marketCap))}</div>
             </div>
             <div class="pm-row">
                 <div class="pm-label">DIV YIELD</div>
-                <div class="pm-val">${f.dividendYield || f.divYield}</div>
+                <div class="pm-val">${escapeHtml(String(f.dividendYield || f.divYield))}</div>
             </div>
             <div class="pm-row">
                 <div class="pm-label">BETA</div>
-                <div class="pm-val">${f.beta}</div>
+                <div class="pm-val">${escapeHtml(String(f.beta))}</div>
             </div>
             <div class="pm-row" style="border-bottom: none;">
                 <div class="pm-label">REV GROWTH</div>
-                <div class="pm-val ${parseFloat(f.revenueGrowth || f.revGrowth) > 0 ? 'pm-val-green' : (parseFloat(f.revenueGrowth || f.revGrowth) < 0 ? 'pm-val-red' : '')}">${f.revenueGrowth || f.revGrowth}</div>
+                <div class="pm-val ${parseFloat(f.revenueGrowth || f.revGrowth) > 0 ? 'pm-val-green' : (parseFloat(f.revenueGrowth || f.revGrowth) < 0 ? 'pm-val-red' : '')}">${escapeHtml(String(f.revenueGrowth || f.revGrowth))}</div>
             </div>
         `;
         heroFundBox.style.display = 'block';
@@ -806,13 +850,20 @@ function renderSummary(summary) {
 }
 
 // --- Chart ---
+let _chartAbortController = null;
 async function loadChartData() {
+    if (_chartAbortController) {
+        _chartAbortController.abort();
+    }
+    _chartAbortController = new AbortController();
+    const signal = _chartAbortController.signal;
+    
     document.getElementById('chart-loading').classList.add('active');
     const requestedSymbol = currentSymbol;
     const requestedRange = currentRange;
     
     try {
-        const res = await fetch(`${API_URL}?action=getStockChart&symbol=${encodeURIComponent(requestedSymbol)}&range=${requestedRange}`);
+        const res = await fetch(`${API_URL}?action=getStockChart&symbol=${encodeURIComponent(requestedSymbol)}&range=${requestedRange}`, { signal });
         if (!res.ok) throw new Error('API Error: ' + res.status);
         const data = await res.json();
         
@@ -903,6 +954,7 @@ async function loadChartData() {
             ctx.fillText('ไม่สามารถโหลดข้อมูลกราฟได้ (Yahoo API Error)', canvas.width/2, canvas.height/2);
         }
     } catch (err) {
+        if (err.name === 'AbortError') return;
         document.getElementById('chart-loading').classList.remove('active');
         console.error(err);
         const canvas = document.getElementById('priceChart');
@@ -1192,10 +1244,14 @@ function toggleLeftPanel() {
 }
 
 
+let _syncTimer = null;
 function syncFavWatchToBackend() {
-    fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.map(encodeURIComponent).join(',')}&watch=${watchlist.map(encodeURIComponent).join(',')}`)
-        .then(res => { if (!res.ok) throw new Error('Sync API Error: ' + res.status); return res.json(); })
-        .catch(e => console.log('Sync failed', e));
+    clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(() => {
+        fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.map(encodeURIComponent).join(',')}&watch=${watchlist.map(encodeURIComponent).join(',')}`)
+            .then(res => { if (!res.ok) throw new Error('Sync API Error: ' + res.status); return res.json(); })
+            .catch(e => console.log('Sync failed', e));
+    }, 1000);
 }
 
 // Global Event Delegation for Stock List
