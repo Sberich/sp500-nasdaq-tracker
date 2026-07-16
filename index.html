@@ -68,19 +68,24 @@
             </div>
             <div class="header-center">
                 <div class="header-filters">
-                    <div class="filter-tabs mover-tabs">
-                        <button class="tab-btn mover-btn" data-mover="day_gainers"><i class="ri-rocket-2-line"></i> Gainers</button>
-                        <button class="tab-btn mover-btn" data-mover="day_losers"><i class="ri-arrow-down-circle-line"></i> Losers</button>
-                        <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
-                        <button class="tab-btn mover-btn" data-mover="trending_now"><i class="ri-pulse-line"></i> Trending</button>
+                    <div class="filter-tabs">
+                        <button class="tab-btn active" data-index="S&P500">S&P500</button>
+                        <button class="tab-btn" data-index="NASDAQ100">NASDAQ100</button>
+                        <button class="tab-btn" data-index="Both">All</button>
                     </div>
-                    <div class="custom-dropdown" id="sector-dropdown">
-                        <button class="dropdown-toggle" id="sector-toggle">
-                            <span class="dropdown-label" id="sector-label">All Sectors (ทั้งหมด)</span>
-                            <i class="ri-arrow-down-s-line"></i>
-                        </button>
-                        <div class="dropdown-menu" id="sector-menu">
-                            <!-- Options populated dynamically -->
+                    <div style="display:flex; gap:8px; width:100%; flex-wrap: wrap;">
+                        <div class="filter-tabs mover-tabs" style="flex:1; min-width: 140px;">
+                            <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
+                            <button class="tab-btn mover-btn" data-mover="trending_now"><i class="ri-pulse-line"></i> Trending</button>
+                        </div>
+                        <div class="custom-dropdown" id="sector-dropdown" style="flex:1; min-width: 140px; width: auto;">
+                            <button class="dropdown-toggle" id="sector-toggle">
+                                <span class="dropdown-label" id="sector-label">All Sectors (ทั้งหมด)</span>
+                                <i class="ri-arrow-down-s-line"></i>
+                            </button>
+                            <div class="dropdown-menu" id="sector-menu">
+                                <!-- Options populated dynamically -->
+                            </div>
                         </div>
                     </div>
                 </div>
