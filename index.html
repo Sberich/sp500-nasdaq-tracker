@@ -74,10 +74,15 @@
                         <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>
                         <button class="tab-btn mover-btn" data-mover="trending_now"><i class="ri-pulse-line"></i> Trending</button>
                     </div>
-                    <select id="sector-select" class="modern-select">
-                        <option value="ทั้งหมด">All Sectors (ทั้งหมด)</option>
-                        <!-- Sectors populated dynamically -->
-                    </select>
+                    <div class="custom-dropdown" id="sector-dropdown">
+                        <button class="dropdown-toggle" id="sector-toggle">
+                            <span class="dropdown-label" id="sector-label">All Sectors (ทั้งหมด)</span>
+                            <i class="ri-arrow-down-s-line"></i>
+                        </button>
+                        <div class="dropdown-menu" id="sector-menu">
+                            <!-- Options populated dynamically -->
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="header-search">

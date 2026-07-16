@@ -186,10 +186,23 @@ function setupEventListeners() {
         if(priceChart) priceChart.resetZoom();
     });
 
-    // Sector Select
-    document.getElementById('sector-select').addEventListener('change', (e) => {
-        currentSector = e.target.value;
-        renderList();
+    // Sector Custom Dropdown
+    const sectorDropdown = document.getElementById('sector-dropdown');
+    const sectorToggle = document.getElementById('sector-toggle');
+    const sectorMenu = document.getElementById('sector-menu');
+    const sectorLabel = document.getElementById('sector-label');
+
+    if (sectorToggle) {
+        sectorToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sectorDropdown.classList.toggle('open');
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (sectorDropdown && !sectorDropdown.contains(e.target)) {
+            sectorDropdown.classList.remove('open');
+        }
     });
     
     // Favorite Button in Detail
@@ -403,14 +416,29 @@ function buildSectorTabs() {
     });
     const sectors = ['ทั้งหมด', ...new Set(filtered.map(s => s.sector).filter(Boolean))];
     
-    const select = document.getElementById('sector-select');
-    if (!select) return;
+    const sectorMenu = document.getElementById('sector-menu');
+    const sectorLabel = document.getElementById('sector-label');
+    const sectorDropdown = document.getElementById('sector-dropdown');
     
-    select.innerHTML = sectors.map(s => 
-        `<option value="${escapeHtml(s)}" ${s === currentSector ? 'selected' : ''}>
+    if (!sectorMenu) return;
+    
+    sectorMenu.innerHTML = sectors.map(s => 
+        `<div class="dropdown-item ${s === currentSector ? 'active' : ''}" data-value="${escapeHtml(s)}">
             ${s === 'ทั้งหมด' ? 'All Sectors (ทั้งหมด)' : escapeHtml(s)}
-        </option>`
+        </div>`
     ).join('');
+
+    if (sectorLabel) {
+        sectorLabel.textContent = currentSector === 'ทั้งหมด' ? 'All Sectors (ทั้งหมด)' : currentSector;
+    }
+
+    sectorMenu.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            currentSector = e.currentTarget.getAttribute('data-value');
+            sectorDropdown.classList.remove('open');
+            renderList();
+        });
+    });
 }
 
 let currentSort = 'auto'; // 'auto', 'az', 's1'
