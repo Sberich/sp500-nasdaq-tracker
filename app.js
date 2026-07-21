@@ -795,17 +795,34 @@ function createLevelRow(type, label, lvl, price) {
     const dots = [...Array(10)].map((_, i) => `<span class="sdot ${i < s ? 'on-' + type : 'off'}"></span>`).join('');
     
     const mLabel = { 'swing': 'Daily Swing', 'swing_w': 'Weekly Swing', 'fib_ret': 'Fib Ret', 'fib_ext': 'Fib Ext', 'fib': 'Fib Pivot', 'pivot': 'Pivot', 'round': 'Round Number' };
-    const mStr = (lvl.methods || '').split('+').map(m => mLabel[m] || m).join(' · ');
+    const mStr = (lvl.methods || '').split('+').map(m => mLabel[m] || m).join(' • ');
+    
+    let badgesHtml = '';
+    if (lvl.tier) {
+        let tierColor = 'var(--text-muted)';
+        if (lvl.tier === 'S') tierColor = '#8b5cf6';
+        if (lvl.tier === 'A') tierColor = '#3b82f6';
+        if (lvl.tier === 'B') tierColor = '#10b981';
+        if (lvl.tier === 'C') tierColor = '#f59e0b';
+        badgesHtml += `<span class="lvl-badge tier-badge" style="background:${tierColor}20;color:${tierColor};">Tier ${lvl.tier}</span>`;
+    }
+    if (lvl.isConfluence) {
+        badgesHtml += `<span class="lvl-badge conf-badge" style="background:#eab30820;color:#eab308;"><i class="ti ti-star-filled" style="font-size:10px;"></i> Conf</span>`;
+    }
+    if (lvl.testCount >= 3) {
+        badgesHtml += `<span class="lvl-badge test-badge" style="background:#ef444420;color:#ef4444;">Tested ${lvl.testCount}x</span>`;
+    }
     
     return `
     <div class="level-row ${type} glass">
         <div class="lr-left">
             <span class="lr-label ${type}">${label}</span>
+            ${badgesHtml}
             <div class="score-bar">${dots}</div>
             <span class="lr-method">${mStr}</span>
         </div>
         <div class="lr-right">
-            <div class="lr-price">$${lvl.price.toFixed(2)}</div>
+            <div class="lr-price">${lvl.price.toFixed(2)}</div>
             <div class="lr-pct ${type}">${pctStr}</div>
         </div>
     </div>`;
