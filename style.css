@@ -1,14 +1,15 @@
 :root {
-    /* Premium Dashboard Variables */
-    --pm-card-bg: #111419;
-    --pm-border: #2a313c;
-    --pm-white: #f1f5f9; /* Softer white */
+    /* Premium Dashboard Variables - mapped to dynamic theme */
+    --pm-card-bg: var(--card-bg);
+    --pm-border: var(--border);
+    --pm-white: var(--text-main);
     --pm-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    --pm-text-muted: #8b949e;
-    --pm-green: #34c759;
-    --pm-green-bg: rgba(52, 199, 89, 0.12);
-    --pm-red: #ff3b30;
-    --pm-red-bg: rgba(255, 59, 48, 0.12);
+    --pm-text-muted: var(--text-muted);
+    --pm-green: var(--green);
+    --pm-green-bg: var(--green-bg);
+    --pm-red: var(--red);
+    --pm-red-bg: var(--red-bg);
+    
     /* Light Theme */
     --bg: #f8fafc;
     --panel-bg: rgba(255, 255, 255, 0.7);
@@ -1048,22 +1049,6 @@ input {
 }
 @keyframes rotate-anim {
     from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-/* ------------------------------------------------------------
-   Screener Panel
-   ------------------------------------------------------------ */
-.screener-panel {
-    background: rgba(20, 20, 22, 0.95);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    animation: slideDown 0.2s ease-out forwards;
-    transform-origin: top;
-    margin-bottom: 8px;
-    border-radius: 0 0 12px 12px;
 }
 
 @keyframes slideDown {
@@ -1154,23 +1139,21 @@ input {
     width: 100%;
     padding: 6px 14px; /* Reduced vertical padding */
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(20, 20, 24, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    background: var(--card-bg);
     color: var(--text-main);
-    font-size: 13px;
-    font-weight: 500;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
 }
 .custom-dropdown .dropdown-toggle:hover, .custom-dropdown.open .dropdown-toggle {
     border-color: rgba(99, 102, 241, 0.4);
-    background: rgba(30, 30, 38, 0.8);
+    background: var(--card-bg);
     box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
 }
 .custom-dropdown .dropdown-toggle i {
@@ -1188,18 +1171,17 @@ input {
     width: 100%;
     max-height: 280px;
     overflow-y: auto;
-    background: rgba(18, 18, 22, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--card-bg);
+    border: 1px solid var(--border);
     border-radius: 12px;
+    padding: 8px;
+    z-index: 1000;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.02);
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 100;
-    padding: 6px;
 }
 .custom-dropdown.open .dropdown-menu {
     opacity: 1;
@@ -1230,3 +1212,5 @@ input {
 .custom-dropdown .dropdown-menu::-webkit-scrollbar-track { background: transparent; }
 .custom-dropdown .dropdown-menu::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
 .custom-dropdown .dropdown-menu::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+

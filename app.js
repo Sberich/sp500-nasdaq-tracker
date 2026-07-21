@@ -32,6 +32,7 @@ let priceChart = null;
 let latestChartArgs = null;
 let currentLevelsData = null;
 let currentScreener = null;
+let asyncQuotesLoaded = false;
 let currentCapFilter = 'ALL';
 let currentTrendFilter = 'ALL';
 let currentVolFilter = 'ALL';
@@ -270,8 +271,8 @@ async function fetchAsyncQuotes() {
     if (isFetchingQuotes) return;
     isFetchingQuotes = true;
     try {
-        // Collect visible symbols or a subset to not overload. Here we take all regular symbols.
-        const symbols = allStocks.map(s => s.symbol).filter(s => !s.includes('.BK') && !s.startsWith('GPF'));
+        // Collect all symbols for async fetch
+        const symbols = allStocks.map(s => s.symbol);
         if (symbols.length === 0) return;
         
         const chunkSize = 50;
@@ -355,6 +356,11 @@ function updateScreenerBadge() {
 }
 
 function applyScreener(preset) {
+    if (preset === 'day_high' && !asyncQuotesLoaded) {
+        alert("กำลังดึงข้อมูลราคาล่าสุด... กรุณารอสักครู่แล้วลองใหม่อีกครั้ง");
+        return;
+    }
+    
     currentScreener = currentScreener === preset ? null : preset;
     document.querySelectorAll('#sc-buy_dip, #sc-breakout, #sc-upside, #sc-day_high').forEach(btn => btn.classList.remove('active'));
     if (currentScreener) {
@@ -482,7 +488,7 @@ function renderList() {
         }
         
         if (currentVolFilter === 'HIGH') {
-            if (!s.volume || !s.avgVolume || s.volume < s.avgVolume * 1.0) return false;
+            if (!s.volume || !s.avgVolume || s.volume < s.avgVolume * 1.5) return false;
         }
         
         if (currentCapFilter !== 'ALL') {
@@ -497,10 +503,13 @@ function renderList() {
             const pS1 = s.pctS1 != null ? s.pctS1 : -999;
             const pS2 = s.pctS2 != null ? s.pctS2 : -999;
             if (!((pS1 >= -0.03 && pS1 <= 0.03) || (pS2 >= -0.03 && pS2 <= 0.03))) return false;
+            if (s.status === 'strong_down') return false;
+            if (!s.volume || !s.avgVolume || s.volume < s.avgVolume * 1.0) return false;
         } else if (currentScreener === 'breakout') {
             const pR1 = s.pctR1 != null ? s.pctR1 : 999;
             const pR2 = s.pctR2 != null ? s.pctR2 : 999;
             if (!((pR1 >= -0.05 && pR1 <= 0.05) || (pR2 >= -0.05 && pR2 <= 0.05))) return false;
+            if (!s.volume || !s.avgVolume || s.volume < s.avgVolume * 1.2) return false;
         } else if (currentScreener === 'upside') {
             const pR1 = s.pctR1 != null ? s.pctR1 : 0;
             if (pR1 < 0.10) return false;
@@ -915,7 +924,7 @@ async function loadChartData() {
                 const low = data.quote.fiftyTwoWeekLow;
                 const high = data.quote.fiftyTwoWeekHigh;
                 if (low && high && data.currentPrice) {
-                    document.getElementById('d-52w-low').textContent = `$${low.toFixed(2)}`;
+                    document.getElementById('d-52w-low').textContent = `${low.toFixed(2)}`;
                     document.getElementById('d-52w-high').textContent = `$${high.toFixed(2)}`;
                     let pct = ((data.currentPrice - low) / (high - low)) * 100;
                     pct = Math.max(0, Math.min(100, pct));
@@ -967,7 +976,6 @@ async function loadChartData() {
             
             const emaLabels = (data.emaData || []).map(e => `EMA${e.period}`).join(', ');
             document.getElementById('ema-label').textContent = emaLabels || 'EMA';
-            
             latestChartArgs = { points: data.points, emaData: data.emaData || [], livePrice: data.currentPrice };
             renderChart(data.points, data.emaData || [], data.currentPrice);
         } else {
@@ -1018,15 +1026,7 @@ function renderChart(points, emaData, livePrice) {
     const closes = points.map(p => p.close);
     const labels = points.map(p => p.label);
     
-    // RSI
-    const rsi = calcRSI(closes);
-    const rsiEl = document.getElementById('d-rsi');
-    if (rsi != null) {
-        let c = rsi < 30 ? 'var(--green)' : rsi > 70 ? 'var(--red)' : 'var(--text-main)';
-        rsiEl.innerHTML = `<span style="color:${c}">${rsi}</span>`;
-    } else {
-        rsiEl.textContent = '—';
-    }
+    // RSI calculation removed to preserve backend RSI
     
     // Colors based on theme
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -1317,3 +1317,4 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
