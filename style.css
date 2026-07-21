@@ -673,12 +673,17 @@ input {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    padding: 2px 6px;
+    padding: 1px 5px;
     border-radius: 4px;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
-    margin-left: 6px;
     vertical-align: middle;
+}
+.lr-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 .tag { font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 6px; background: var(--border); color: var(--text-main); }
 .tag.purple { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple); }

@@ -816,8 +816,10 @@ function createLevelRow(type, label, lvl, price) {
     return `
     <div class="level-row ${type} glass">
         <div class="lr-left">
-            <span class="lr-label ${type}">${label}</span>
-            ${badgesHtml}
+            <div class="lr-title-row">
+                <span class="lr-label ${type}">${label}</span>
+                ${badgesHtml}
+            </div>
             <div class="score-bar">${dots}</div>
             <span class="lr-method">${mStr}</span>
         </div>
