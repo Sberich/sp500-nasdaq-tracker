@@ -1370,13 +1370,7 @@ function removeWatchLine(index) {
     saveCustomWatchLines(lines);
     if(priceChart) addChartAnnotations();
 }
-document.addEventListener('DOMContentLoaded', () => {
-    // Add wait for element
-    setTimeout(() => {
-        
-        }
-    }, 1000);
-});
+
 
 // --- TradingView style shortcuts for Watch Lines ---
 let currentHoverPrice = null;
