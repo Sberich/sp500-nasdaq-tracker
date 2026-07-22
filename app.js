@@ -252,6 +252,13 @@ async function fetchStocks() {
                 watchlist = data.watch;
                 safeSet('SP_WATCH', JSON.stringify(watchlist));
             }
+            // Load cross-device watch lines from backend
+            if (data.watchLines) {
+                try { globalWatchLines = JSON.parse(data.watchLines); } catch(e) { globalWatchLines = {}; }
+            } else {
+                try { globalWatchLines = JSON.parse(safeGet('SP_WATCH_LINES', '{}') || '{}'); } catch(e) { globalWatchLines = {}; }
+            }
+
             buildSectorTabs();
             renderList();
             
