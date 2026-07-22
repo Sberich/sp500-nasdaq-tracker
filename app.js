@@ -646,7 +646,7 @@ function openDetail(symbol) {
     if (!stock) return;
     
     currentSymbol = symbol;
-    
+    if (typeof renderWatchLinesUI === 'function') renderWatchLinesUI();
     // UI Transitions
     elEmptyState.classList.add('hidden');
     elDetailContent.classList.remove('hidden');
