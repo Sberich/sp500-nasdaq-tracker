@@ -933,7 +933,7 @@ async function loadChartData() {
             if (data.quote) {
                 const low = data.quote.fiftyTwoWeekLow;
                 const high = data.quote.fiftyTwoWeekHigh;
-                if (low && high && data.currentPrice) {
+                if (low && high && high > low && data.currentPrice) {
                     document.getElementById('d-52w-low').textContent = `$${low.toFixed(2)}`;
                     document.getElementById('d-52w-high').textContent = `$${high.toFixed(2)}`;
                     let pct = ((data.currentPrice - low) / (high - low)) * 100;
@@ -1114,7 +1114,12 @@ function renderChart(points, emaData, livePrice) {
                 },
                 zoom: {
                     pan: { enabled: true, mode: 'x' },
-                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                    pan: { enabled: true, mode: 'x' },
+                    zoom: {
+                        wheel: { enabled: true, modifierKey: 'ctrl' },
+                        pinch: { enabled: true },
+                        mode: 'x'
+                    }
                 }
             },
             scales: {
@@ -1142,6 +1147,15 @@ function addChartAnnotations() {
     const rColor = isDark ? 'rgba(239, 68, 68, 0.4)' : 'rgba(220, 38, 38, 0.4)';
 
     const annotations = {};
+
+    const customLines = (typeof getCustomWatchLines === 'function') ? getCustomWatchLines() : [];
+    customLines.forEach((p, i) => {
+        annotations['customLine'+i] = {
+            type: 'line', yMin: p, yMax: p, borderColor: '#8b5cf6', borderWidth: 2, borderDash: [5, 5],
+            label: { display: true, content: '📌 Watch', position: 'end', backgroundColor: '#8b5cf6', color: 'white', font: { size: 10 } }
+        };
+    });
+
     const supports = currentLevelsData.supports || [];
     const resists = currentLevelsData.resists || [];
     
@@ -1335,4 +1349,98 @@ if ('serviceWorker' in navigator) {
       console.log('ServiceWorker registration failed: ', err);
     });
   });
+}
+
+function getCustomWatchLines() {
+    try { return JSON.parse(localStorage.getItem('watchLines_' + currentSymbol)) || []; } catch(e){ return []; }
+}
+function saveCustomWatchLines(lines) {
+    localStorage.setItem('watchLines_' + currentSymbol, JSON.stringify(lines));
+    renderWatchLinesUI();
+}
+function renderWatchLinesUI() {
+    const lines = getCustomWatchLines();
+    const container = document.getElementById('watch-lines-list');
+    if(!container) return;
+    container.innerHTML = lines.map((price, i) => `<span class="tag purple" style="cursor:pointer; background:#8b5cf640;" onclick="removeWatchLine(${i})"><i class="ri-close-line"></i> $${price}</span>`).join('');
+}
+function removeWatchLine(index) {
+    let lines = getCustomWatchLines();
+    lines.splice(index, 1);
+    saveCustomWatchLines(lines);
+    if(priceChart) addChartAnnotations();
+}
+document.addEventListener('DOMContentLoaded', () => {
+    // Add wait for element
+    setTimeout(() => {
+        
+        }
+    }, 1000);
+});
+
+// --- TradingView style shortcuts for Watch Lines ---
+let currentHoverPrice = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Add wait for element to ensure canvas exists
+    setTimeout(() => {
+        const canvas = document.getElementById('priceChart');
+        if (canvas) {
+            canvas.addEventListener('mousemove', (e) => {
+                if (priceChart && priceChart.scales.y) {
+                    currentHoverPrice = priceChart.scales.y.getValueForPixel(e.offsetY);
+                }
+            });
+            canvas.addEventListener('mouseleave', () => {
+                currentHoverPrice = null;
+            });
+            
+            // Double Click to add line
+            canvas.addEventListener('dblclick', (e) => {
+                if (priceChart && priceChart.scales.y) {
+                    let p = priceChart.scales.y.getValueForPixel(e.offsetY);
+                    addCustomWatchLineByPrice(p);
+                }
+            });
+            
+            // Mobile Long Press (Hammer.js)
+            if (typeof Hammer !== 'undefined') {
+                const mc = new Hammer.Manager(canvas);
+                mc.add(new Hammer.Press({ time: 500 })); // 500ms hold
+                mc.on('press', (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const offsetY = e.center.y - rect.top;
+                    if (priceChart && priceChart.scales.y) {
+                        let p = priceChart.scales.y.getValueForPixel(offsetY);
+                        addCustomWatchLineByPrice(p);
+                        if (navigator.vibrate) navigator.vibrate(50); // Tactile feedback
+                    }
+                });
+            }
+        }
+    }, 1500); // Wait for chart to init
+});
+
+// Alt + H to add line
+document.addEventListener('keydown', (e) => {
+    if (e.altKey && (e.key === 'h' || e.key === 'H')) {
+        if (currentHoverPrice !== null) {
+            e.preventDefault();
+            addCustomWatchLineByPrice(currentHoverPrice);
+        }
+    }
+});
+
+function addCustomWatchLineByPrice(rawPrice) {
+    let p = Math.round(rawPrice * 100) / 100;
+    if (p > 0) {
+        let lines = getCustomWatchLines();
+        if(!lines.includes(p)) {
+            lines.push(p);
+            saveCustomWatchLines(lines);
+            if(priceChart && true) {
+                addChartAnnotations();
+            }
+        }
+    }
 }

@@ -2,7 +2,7 @@
 <html lang="th" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- PWA / Web App Settings -->
     <link rel="manifest" href="manifest.json">
@@ -32,7 +32,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><defs><filter id='g' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='3' result='b1'/><feGaussianBlur stdDeviation='8' result='b2'/><feMerge><feMergeNode in='b2'/><feMergeNode in='b1'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><path d='M 0 50 L 25 50 L 45 10 L 60 90 L 75 50 L 100 50' stroke='%2300ffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' filter='url(%23g)'/></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -298,7 +298,7 @@
                                     </div>
                                 </div>
                                 <div class="pm-row">
-                                    <div class="pm-label">RSI (14)</div>
+                                    <div class="pm-label" id="rsi-label">RSI (14)</div>
                                     <div class="pm-val mono" id="d-rsi">-</div>
                                 </div>
                                 <div class="pm-row">
@@ -337,9 +337,13 @@
                             </div>
 
                             <div class="chart-footer">
-                                <span class="hint"><i class="ri-mouse-line"></i> Scroll=Zoom | <i class="ri-drag-move-fill"></i> Drag=Pan</span>
+                                <div class="hint-left" style="display:flex; align-items:center; gap:12px;">
+                                    <span class="hint"><i class="ri-mouse-line"></i> Ctrl+Scroll=Zoom | Drag=Pan | Alt+H=ปักหมุดราคา</span>
+                                    
+                                </div>
                                 <button class="action-btn-small" id="btn-reset-zoom"><i class="ri-refresh-line"></i> Reset</button>
                             </div>
+                            <div id="watch-lines-list" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; padding:0 20px;"></div>
                         </div>
 
                         <!-- Levels Section -->
@@ -398,7 +402,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
 <style>
 /* Premium About Modal */
 .about-overlay {
@@ -500,7 +504,8 @@
       Developed by
       <span class="premium-gold">KⓇU M00 ¥EO</span>
     </div>
-    </div>
+  </div>
+</div>
 </div>
 <script>
 function openAbout() { document.getElementById('about-modal').classList.add('open'); }
@@ -510,7 +515,6 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 </script>
 </body>
 </html>
-
 
 
 
