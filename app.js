@@ -25,6 +25,7 @@ let allStocks = [];
 let favorites = JSON.parse(safeGet('SP_FAVS', '[]') || '[]');
 let watchlist = JSON.parse(safeGet('SP_WATCH', '[]') || '[]');
 let currentSymbol = '';
+let globalWatchLines = {}; // Store all cross-device watch lines
 let currentRange = '1M';
 let currentSector = 'ทั้งหมด';
 let currentIndex = 'all';
@@ -1309,7 +1310,8 @@ let _syncTimer = null;
 function syncFavWatchToBackend() {
     clearTimeout(_syncTimer);
     _syncTimer = setTimeout(() => {
-        fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.map(encodeURIComponent).join(',')}&watch=${watchlist.map(encodeURIComponent).join(',')}`)
+        let watchLinesPayload = encodeURIComponent(JSON.stringify(globalWatchLines || {}));
+        fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.map(encodeURIComponent).join(',')}&watch=${watchlist.map(encodeURIComponent).join(',')}&watchLines=${watchLinesPayload}`)
             .then(res => { if (!res.ok) throw new Error('Sync API Error: ' + res.status); return res.json(); })
             .catch(e => console.log('Sync failed', e));
     }, 1000);
@@ -1352,11 +1354,13 @@ if ('serviceWorker' in navigator) {
 }
 
 function getCustomWatchLines() {
-    try { return JSON.parse(localStorage.getItem('watchLines_' + currentSymbol)) || []; } catch(e){ return []; }
+    return globalWatchLines[currentSymbol] || [];
 }
 function saveCustomWatchLines(lines) {
-    localStorage.setItem('watchLines_' + currentSymbol, JSON.stringify(lines));
+    globalWatchLines[currentSymbol] = lines;
+    safeSet('SP_WATCH_LINES', JSON.stringify(globalWatchLines));
     renderWatchLinesUI();
+    syncFavWatchToBackend();
 }
 function renderWatchLinesUI() {
     const lines = getCustomWatchLines();
