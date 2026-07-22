@@ -1152,7 +1152,7 @@ function addChartAnnotations() {
     customLines.forEach((p, i) => {
         annotations['customLine'+i] = {
             type: 'line', yMin: p, yMax: p, borderColor: '#8b5cf6', borderWidth: 2, borderDash: [5, 5],
-            label: { display: true, content: '📌 Watch', position: 'start', backgroundColor: '#8b5cf6', color: 'white', font: { size: 10 } }
+            label: { display: true, content: '📌 ' + p, position: 'start', backgroundColor: 'transparent', color: '#8b5cf6', font: { size: 10, family: 'IBM Plex Mono', weight: '600' }, yAdjust: -10 }
         };
     });
 
@@ -1163,7 +1163,7 @@ function addChartAnnotations() {
         annotations['s'+i] = {
             type: 'line', yMin: s.price, yMax: s.price,
             borderColor: sColor, borderWidth: 1.5, borderDash: [4, 4],
-            label: { display: true, content: 'S'+(i+1)+' $'+s.price.toFixed(2), position: 'start', yAdjust: -10, backgroundColor: 'transparent', color: sColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+            label: { display: true, content: 'S'+(i+1)+' $'+s.price.toFixed(2), position: 'end', yAdjust: -10, backgroundColor: 'transparent', color: sColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
         };
     });
     
@@ -1171,7 +1171,7 @@ function addChartAnnotations() {
         annotations['r'+i] = {
             type: 'line', yMin: r.price, yMax: r.price,
             borderColor: rColor, borderWidth: 1.5, borderDash: [4, 4],
-            label: { display: true, content: 'R'+(resists.length-i)+' $'+r.price.toFixed(2), position: 'start', yAdjust: -10, backgroundColor: 'transparent', color: rColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+            label: { display: true, content: 'R'+(resists.length-i)+' $'+r.price.toFixed(2), position: 'end', yAdjust: -10, backgroundColor: 'transparent', color: rColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
         };
     });
     
