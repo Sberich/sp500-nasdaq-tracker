@@ -1479,7 +1479,6 @@ function requestAlertPermission() {
         notificationsEnabled = !notificationsEnabled;
         safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
         updateAlertButtonUI();
-        showToast(notificationsEnabled ? 'เปิดใช้งานการแจ้งเตือนแล้ว' : 'ปิดการแจ้งเตือนแล้ว', 'info');
         return;
     }
     
@@ -1488,11 +1487,6 @@ function requestAlertPermission() {
         notificationsEnabled = perm === 'granted';
         safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
         updateAlertButtonUI();
-        if (notificationsEnabled) {
-            showToast('เปิดใช้งานการแจ้งเตือนราคาแล้ว', 'info');
-        } else {
-            showToast('การแจ้งเตือนถูกปฏิเสธ', 'info');
-        }
     });
 }
 
