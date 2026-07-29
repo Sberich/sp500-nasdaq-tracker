@@ -263,7 +263,7 @@ async function fetchStocks() {
             renderList();
             
             // Asynchronously fetch Pre/Post Market prices and Market Cap to not block UI
-            fetchAsyncQuotes();
+            // fetchAsyncQuotes(); // Disabled on init to prevent blocking chart loads (handled by polling loop)
         } else {
             showErrorList(data.error || 'Failed to load data');
         }
@@ -291,8 +291,11 @@ async function fetchAsyncQuotes() {
             const batch = chunks.slice(i, i + CONCURRENCY);
             const results = await Promise.all(batch.map(async (chunk) => {
                 try {
-                    const res = await fetch(API_URL + '?action=getBulkQuotes&symbols=' + chunk.map(encodeURIComponent).join(','),
-                        { signal: AbortSignal.timeout(15000) });
+                    const fetchOpts = {};
+                    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+                        fetchOpts.signal = AbortSignal.timeout(15000);
+                    }
+                    const res = await fetch(API_URL + '?action=getBulkQuotes&symbols=' + chunk.map(encodeURIComponent).join(','), fetchOpts);
                     if (!res.ok) throw new Error('API Error: ' + res.status);
                     return await res.json();
                 } catch (e) { console.error('Chunk fetch failed:', e); return null; }
@@ -1470,11 +1473,26 @@ function requestAlertPermission() {
         showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
         return;
     }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        showToast(notificationsEnabled ? 'เปิดใช้งานการแจ้งเตือนแล้ว' : 'ปิดการแจ้งเตือนแล้ว', 'info');
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
     Notification.requestPermission().then(perm => {
         notificationsEnabled = perm === 'granted';
         safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
         updateAlertButtonUI();
-        if (notificationsEnabled) showToast('เปิดใช้งานการแจ้งเตือนราคาแล้ว', 'info');
+        if (notificationsEnabled) {
+            showToast('เปิดใช้งานการแจ้งเตือนราคาแล้ว', 'info');
+        } else {
+            showToast('การแจ้งเตือนถูกปฏิเสธ', 'info');
+        }
     });
 }
 
