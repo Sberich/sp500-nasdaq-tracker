@@ -278,31 +278,28 @@ async function fetchAsyncQuotes() {
     if (isFetchingQuotes) return;
     isFetchingQuotes = true;
     try {
-        // Collect visible symbols or a subset to not overload. Here we take all regular symbols.
         const symbols = allStocks.map(s => s.symbol).filter(s => !s.includes('.BK') && !s.startsWith('GPF'));
         if (symbols.length === 0) return;
-        
+
         const chunkSize = 50;
         const chunks = [];
-        for (let i = 0; i < symbols.length; i += chunkSize) {
-            chunks.push(symbols.slice(i, i + chunkSize));
-        }
-        
-        const promises = chunks.map(async (chunk) => {
-            const res = await fetch(`${API_URL}?action=getBulkQuotes&symbols=${chunk.map(encodeURIComponent).join(',')}`);
-            if (!res.ok) throw new Error('API Error: ' + res.status);
-            return await res.json();
-        });
-        
-        const results = await Promise.all(promises);
-        
+        for (let i = 0; i < symbols.length; i += chunkSize) chunks.push(symbols.slice(i, i + chunkSize));
+
+        const CONCURRENCY = 3;
         let extMap = {};
-        for (const r of results) {
-            if (r.success && r.data) {
-                Object.assign(extMap, r.data);
-            }
+        for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+            const batch = chunks.slice(i, i + CONCURRENCY);
+            const results = await Promise.all(batch.map(async (chunk) => {
+                try {
+                    const res = await fetch(API_URL + '?action=getBulkQuotes&symbols=' + chunk.map(encodeURIComponent).join(','),
+                        { signal: AbortSignal.timeout(15000) });
+                    if (!res.ok) throw new Error('API Error: ' + res.status);
+                    return await res.json();
+                } catch (e) { console.error('Chunk fetch failed:', e); return null; }
+            }));
+            results.forEach(r => { if (r && r.success && r.data) Object.assign(extMap, r.data); });
         }
-        
+
         let updated = false;
         for (const s of allStocks) {
             if (extMap[s.symbol]) {
@@ -321,14 +318,23 @@ async function fetchAsyncQuotes() {
                 updated = true;
             }
         }
-        if (updated) {
-            renderList(); // Re-render list to show prices and apply any active screener
-        }
+        if (updated) updateStockPricesInPlace();
     } catch (err) {
         console.error("Bulk Quotes Error:", err);
     } finally {
         isFetchingQuotes = false;
     }
+}
+
+function updateStockPricesInPlace() {
+    const list = document.getElementById('stock-list');
+    if (!list) return;
+    allStocks.forEach(s => {
+        const card = list.querySelector('.stock-card[data-symbol="' + CSS.escape(s.symbol) + '"]');
+        if (!card) return;
+        const priceEl = card.querySelector('.sc-price');
+        if (priceEl && s.price != null) priceEl.textContent = String.fromCharCode(36) + s.price.toFixed(2);
+    });
 }
 
 function showErrorList(msg) {
@@ -955,7 +961,7 @@ async function loadChartData() {
 
                 const dLow = data.quote.dayLow;
                 const dHigh = data.quote.dayHigh;
-                if (dLow && dHigh && data.currentPrice) {
+                if (dLow && dHigh && dHigh > dLow && data.currentPrice) {
                     document.getElementById('d-day-low').textContent = `$${dLow.toFixed(2)}`;
                     document.getElementById('d-day-high').textContent = `$${dHigh.toFixed(2)}`;
                     let pct = ((data.currentPrice - dLow) / (dHigh - dLow)) * 100;
@@ -968,11 +974,7 @@ async function loadChartData() {
                 }
                 
                 if (data.summary) {
-                    const descEl = document.getElementById('d-company-desc');
-                    if (descEl) {
-                        descEl.innerHTML = escapeHtml(data.summary.desc || 'ไม่มีข้อมูล');
-                        descEl.style.display = 'block';
-                    }
+                    // Description handled by renderSummary() — no duplicate here
                     
                     // --- Pre/Post Market Price Update ---
                     const f = data.summary.fundamentals;
@@ -1024,16 +1026,21 @@ async function loadChartData() {
 }
 
 function calcRSI(prices, period = 14) {
-    if (prices.length < period + 1) return null;
+    const clean = prices.filter(p => typeof p === 'number' && Number.isFinite(p));
+    if (clean.length < period + 1) return null;
     let avgG = 0, avgL = 0;
-    for (let i = 1; i <= period; i++) { const d = prices[i] - prices[i-1]; d > 0 ? avgG += d : avgL -= d; }
-    avgG /= period; avgL /= period;
-    for (let i = period + 1; i < prices.length; i++) {
-        const d = prices[i] - prices[i-1];
-        avgG = (avgG * 13 + (d > 0 ? d : 0)) / 14;
-        avgL = (avgL * 13 + (d < 0 ? -d : 0)) / 14;
+    for (let i = 1; i <= period; i++) {
+        const d = clean[i] - clean[i - 1];
+        if (d > 0) avgG += d; else avgL -= d;
     }
-    return Math.round((100 - 100 / (1 + avgG / (avgL || 0.0001))) * 100) / 100;
+    avgG /= period; avgL /= period;
+    for (let i = period + 1; i < clean.length; i++) {
+        const d = clean[i] - clean[i - 1];
+        avgG = (avgG * (period - 1) + (d > 0 ? d : 0)) / period;
+        avgL = (avgL * (period - 1) + (d < 0 ? -d : 0)) / period;
+    }
+    if (avgL === 0) return 100;
+    return Math.round((100 - 100 / (1 + avgG / avgL)) * 100) / 100;
 }
 
 function renderChart(points, emaData, livePrice) {
@@ -1045,14 +1052,16 @@ function renderChart(points, emaData, livePrice) {
     const closes = points.map(p => p.close);
     const labels = points.map(p => p.label);
     
-    // RSI
+    // RSI — show on chart badge, don't overwrite daily RSI
     const rsi = calcRSI(closes);
-    const rsiEl = document.getElementById('d-rsi');
-    if (rsi != null) {
-        let c = rsi < 30 ? 'var(--green)' : rsi > 70 ? 'var(--red)' : 'var(--text-main)';
-        rsiEl.innerHTML = `<span style="color:${c}">${rsi}</span>`;
-    } else {
-        rsiEl.textContent = '—';
+    const rsiBadge = document.getElementById('chart-rsi-badge');
+    if (rsiBadge) {
+        if (rsi != null) {
+            rsiBadge.textContent = 'RSI(14) ' + currentRange + ': ' + rsi;
+            rsiBadge.style.color = rsi < 30 ? 'var(--green)' : rsi > 70 ? 'var(--red)' : 'var(--text-main)';
+        } else {
+            rsiBadge.textContent = '';
+        }
     }
     
     // Colors based on theme
@@ -1449,3 +1458,143 @@ function addCustomWatchLineByPrice(rawPrice) {
         }
     }
 }
+
+
+// ================== PRICE ALERT SYSTEM ==================
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        if (notificationsEnabled) showToast('เปิดใช้งานการแจ้งเตือนราคาแล้ว', 'info');
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});

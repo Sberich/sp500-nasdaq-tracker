@@ -1,16 +1,15 @@
-const CACHE_NAME = 'sp-screener-v12';
+const CACHE_NAME = 'sp-screener-v13';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/style.css?v=11',
-  '/app.js?v=11',
+  '/style.css?v=13',
+  '/app.js?v=13',
   'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js',
   'https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js',
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js',
-  'https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js',
-  'https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js'
+
 ];
 
 self.addEventListener('install', (event) => {

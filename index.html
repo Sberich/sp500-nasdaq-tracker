@@ -32,7 +32,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><defs><filter id='g' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='3' result='b1'/><feGaussianBlur stdDeviation='8' result='b2'/><feMerge><feMergeNode in='b2'/><feMergeNode in='b1'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><path d='M 0 50 L 25 50 L 45 10 L 60 90 L 75 50 L 100 50' stroke='%2300ffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' filter='url(%23g)'/></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -93,6 +93,9 @@
             </div>
 
             <div class="header-right">
+                <button id="alert-toggle-btn" class="icon-btn" title="เปิด/ปิดการแจ้งเตือนราคา" onclick="requestAlertPermission()">
+                    <i class="ri-notification-3-line"></i>
+                </button>
                 <button id="refresh-btn" class="icon-btn" title="Refresh Data">
                       <i class="ri-refresh-line"></i>
                   </button>
@@ -326,6 +329,7 @@
                                 <div class="chart-legend">
                                     <span class="legend-item"><span class="dot blue"></span> ราคาปิด</span>
                                     <span class="legend-item"><span class="dot orange"></span> <span id="ema-label">EMA</span></span>
+                                    <span class="legend-item rsi-box" id="chart-rsi-badge" style="font-size:11px;font-weight:600;"></span>
                                 </div>
                             </div>
                             
@@ -398,7 +402,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
 <style>
 /* Premium About Modal */
 .about-overlay {
