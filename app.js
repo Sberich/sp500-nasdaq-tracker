@@ -236,10 +236,22 @@ function setupEventListeners() {
 }
 
 // --- Data Fetching ---
+async function fetchWithRetry(url, options = {}, retries = 2) {
+    for (let i = 0; i <= retries; i++) {
+        try {
+            const res = await fetch(url, options);
+            if (res.ok) return res;
+            if (i === retries) throw new Error('API Error: ' + res.status);
+        } catch (err) {
+            if (i === retries || (err.name === 'AbortError')) throw err;
+            await new Promise(resolve => setTimeout(resolve, 1500 * (i + 1))); // delay before retry
+        }
+    }
+}
+
 async function fetchStocks() {
     try {
-        const res = await fetch(`${API_URL}?action=getStockList`);
-        if (!res.ok) throw new Error('API Error: ' + res.status);
+        const res = await fetchWithRetry(`${API_URL}?action=getStockList`);
         const data = await res.json();
         
         if (data.success) {
@@ -290,13 +302,11 @@ async function fetchAsyncQuotes() {
         for (let i = 0; i < chunks.length; i += CONCURRENCY) {
             const batch = chunks.slice(i, i + CONCURRENCY);
             const results = await Promise.all(batch.map(async (chunk) => {
-                try {
                     const fetchOpts = {};
                     if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
                         fetchOpts.signal = AbortSignal.timeout(15000);
                     }
-                    const res = await fetch(API_URL + '?action=getBulkQuotes&symbols=' + chunk.map(encodeURIComponent).join(','), fetchOpts);
-                    if (!res.ok) throw new Error('API Error: ' + res.status);
+                    const res = await fetchWithRetry(API_URL + '?action=getBulkQuotes&symbols=' + chunk.map(encodeURIComponent).join(','), fetchOpts);
                     return await res.json();
                 } catch (e) { console.error('Chunk fetch failed:', e); return null; }
             }));
@@ -732,8 +742,7 @@ async function loadLiveLevels() {
     
     const requestedSymbol = currentSymbol;
     try {
-        const res = await fetch(`${API_URL}?action=getLiveLevels&symbol=${encodeURIComponent(requestedSymbol)}`, { signal });
-        if (!res.ok) throw new Error('API Error: ' + res.status);
+        const res = await fetchWithRetry(`${API_URL}?action=getLiveLevels&symbol=${encodeURIComponent(requestedSymbol)}`, { signal });
         const data = await res.json();
         
         if (currentSymbol !== requestedSymbol) return;
@@ -927,8 +936,7 @@ async function loadChartData() {
     const requestedRange = currentRange;
     
     try {
-        const res = await fetch(`${API_URL}?action=getStockChart&symbol=${encodeURIComponent(requestedSymbol)}&range=${requestedRange}`, { signal });
-        if (!res.ok) throw new Error('API Error: ' + res.status);
+        const res = await fetchWithRetry(`${API_URL}?action=getStockChart&symbol=${encodeURIComponent(requestedSymbol)}&range=${requestedRange}`, { signal });
         const data = await res.json();
         
         if (currentSymbol !== requestedSymbol || currentRange !== requestedRange) return;
@@ -1211,8 +1219,7 @@ async function fetchMarketMovers(scrId) {
     }
     
     try {
-        const res = await fetch(`${API_URL}?action=getMarketMovers&scrId=${scrId}`);
-        if (!res.ok) throw new Error('API Error: ' + res.status);
+        const res = await fetchWithRetry(`${API_URL}?action=getMarketMovers&scrId=${scrId}`);
         const data = await res.json();
         
         if (data.success) {
@@ -1293,10 +1300,10 @@ function formatVolume(vol) {
 
 // Visitor Count (GPF1 logic)
 document.addEventListener('DOMContentLoaded', () => {
-    fetch('https://api.counterapi.dev/v1/alphazone_dashboard/visits/up')
+    fetch('https://countapi.mileshilliard.com/api/v1/hit/alphazone_dashboard_sp500')
         .then(res => res.json())
         .then(data => {
-            let count = data.count || 1;
+            let count = data.value || 1; // Note: mileshilliard returns "value", not "count"
             let v = Math.floor(count / 10000) + 1;
             let rem = (count % 10000).toString().padStart(4, '0');
             const el = document.getElementById('global-visit-count');
