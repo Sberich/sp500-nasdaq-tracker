@@ -302,6 +302,7 @@ async function fetchAsyncQuotes() {
         for (let i = 0; i < chunks.length; i += CONCURRENCY) {
             const batch = chunks.slice(i, i + CONCURRENCY);
             const results = await Promise.all(batch.map(async (chunk) => {
+                try {
                     const fetchOpts = {};
                     if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
                         fetchOpts.signal = AbortSignal.timeout(15000);
