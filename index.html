@@ -64,11 +64,19 @@
                   </div>
                 <div>
                     <h1 style="display:flex; align-items:center; gap:8px;">AlphaZone</h1>
+                    
                 </div>
             </div>
             <div class="header-center">
                 <div class="header-filters" style="flex-direction: row; flex-wrap: wrap; justify-content: center;">
                     <div class="filter-tabs mover-tabs">
+                        <!-- ป้ายนีออน Fear & Greed Index -->
+                    <div id="fg-badge" class="fg-badge" style="display:none;" title="CNN Fear & Greed Index">
+                        <span id="fg-emoji" class="fg-emoji">😐</span>
+                        <span id="fg-label" class="fg-label">Loading</span>
+                        <span class="fg-dot">·</span>
+                        <span id="fg-score" class="fg-score">--</span>
+                    </div>
                         <button class="tab-btn mover-btn" data-mover="day_gainers"><i class="ri-rocket-2-line"></i> Gainers</button>
                         <button class="tab-btn mover-btn" data-mover="day_losers"><i class="ri-arrow-down-circle-line"></i> Losers</button>
                         <button class="tab-btn mover-btn" data-mover="most_actives"><i class="ri-fire-line"></i> Active</button>

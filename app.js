@@ -1316,6 +1316,85 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 });
 
+
+// ==========================================
+// CNN Fear & Greed Index
+// ==========================================
+async function updateFearGreedBadge() {
+    try {
+        const badge = document.getElementById('fg-badge');
+        if (!badge) return;
+
+        
+        const resp = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata', {
+            headers: {
+                'Origin': 'https://edition.cnn.com',
+                'Referer': 'https://edition.cnn.com/'
+            }
+        });
+        if (!resp.ok) throw new Error('Fetch failed');
+        const raw = await resp.json();
+        if (!raw.fear_and_greed) throw new Error('Bad structure');
+        
+        // แปลง rating ให้เป็นภาษาไทย (Capitalized)
+        const ratingMap = {
+            'extreme fear': 'Extreme Fear',
+            'fear': 'Fear',
+            'neutral': 'Neutral',
+            'greed': 'Greed',
+            'extreme greed': 'Extreme Greed'
+        };
+        const ratingLower = raw.fear_and_greed.rating.toLowerCase();
+
+        const data = { 
+            score: Math.round(raw.fear_and_greed.score), 
+            rating: ratingMap[ratingLower] || raw.fear_and_greed.rating 
+        };
+
+        
+        // กำหนดสีและ Emoji ตามคะแนน
+        let color = '#94a3b8'; // Neutral (Gray)
+        let emoji = '😐';
+        
+        if (data.score <= 24) { color = '#ef4444'; emoji = '😱'; } // Extreme Fear (Red)
+        else if (data.score <= 44) { color = '#f97316'; emoji = '😨'; } // Fear (Orange)
+        else if (data.score <= 55) { color = '#94a3b8'; emoji = '😐'; } // Neutral (Gray)
+        else if (data.score <= 75) { color = '#22c55e'; emoji = '😏'; } // Greed (Green)
+        else { color = '#eab308'; emoji = '🤑'; } // Extreme Greed (Gold)
+
+        // อัปเดต DOM
+        document.getElementById('fg-emoji').textContent = emoji;
+        document.getElementById('fg-label').textContent = data.rating;
+        document.getElementById('fg-score').textContent = data.score;
+        
+        // อัปเดต CSS Variables สำหรับสี
+        badge.style.setProperty('--fg-color', color);
+        
+        // แปลง HEX เป็น RGB สำหรับเงา (glow)
+        let r=0, g=0, b=0;
+        if(color.length === 7) {
+            r = parseInt(color.substring(1,3), 16);
+            g = parseInt(color.substring(3,5), 16);
+            b = parseInt(color.substring(5,7), 16);
+        }
+        badge.style.setProperty('--fg-glow', `rgba(${r},${g},${b}, 0.3)`);
+        
+        // แสดงป้าย
+        badge.style.display = 'inline-flex';
+        
+    } catch (e) {
+        console.error('Fear & Greed fetch error:', e);
+        const badge = document.getElementById('fg-badge');
+        if (badge) badge.style.display = 'none';
+    }
+}
+
+// โหลดครั้งแรกเมื่อเปิดหน้าเว็บ และตั้งเวลาอัปเดตทุก 15 นาที
+document.addEventListener('DOMContentLoaded', () => {
+    updateFearGreedBadge();
+    setInterval(updateFearGreedBadge, 15 * 60 * 1000);
+});
+
 // --- Layout Toggles ---
 function toggleLeftPanel() {
     const leftPanel = document.getElementById('list-panel');
