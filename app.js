@@ -1380,6 +1380,7 @@ async function updateFearGreedBadge() {
         document.getElementById('fg-score').textContent = data.score;
         
         badge.style.setProperty('--fg-color', color);
+        badge.style.display = 'flex';
         badge.style.opacity = '1';
         badge.style.transform = 'translateY(0)';
         
@@ -1404,6 +1405,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // ดึงใหม่ทุก 1 ชั่วโมง (3,600,000 ms) ตามที่ตั้งไว้เพื่อประหยัดโควตา
     setInterval(updateFearGreedBadge, 3600000);
 });
+
+// ==========================================
+// Sync & UI Interactions
+// ==========================================
+let _syncTimer = null;
+function syncFavWatchToBackend() {
+    clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(() => {
+        let watchLinesPayload = encodeURIComponent(JSON.stringify(globalWatchLines || {}));
+        fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.map(encodeURIComponent).join(',')}&watch=${watchlist.map(encodeURIComponent).join(',')}&watchLines=${watchLinesPayload}`)
+            .then(res => { if (!res.ok) throw new Error('Sync API Error: ' + res.status); return res.json(); })
+            .catch(e => console.log('Sync failed', e));
+    }, 1000);
+}
+
+// Global Event Delegation for Stock List
+elStockList.addEventListener('click', (e) => {
+    const card = e.target.closest('.stock-card');
+    if (!card) return;
+    const symbol = card.dataset.symbol;
+    if (!symbol) return;
+    
+    if (e.target.closest('.sc-watch')) {
+        e.stopPropagation();
+        toggleWatchlist(symbol);
+        if (!currentMover) renderList(); // Re-render if in normal list to update sort/filter
+        return;
+    }
+    if (e.target.closest('.sc-star')) {
+        e.stopPropagation();
+        toggleFavorite(symbol);
+        if (!currentMover) renderList(); // Re-render if in normal list to update sort/filter
+        return;
+    }
+    
+    document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    openDetail(symbol);
+});
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('ServiceWorker registration successful');
+    }).catch(err => {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  });
+}
 
 // ================== PRICE ALERT SYSTEM ==================
 let lastCheckedPrices = {};
