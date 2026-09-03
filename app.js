@@ -579,7 +579,24 @@ function renderList() {
     const nearCount = stocks.filter(s => s.pctS1 != null && Math.abs(s.pctS1 * 100) < 5).length;
     elStatsBar.innerHTML = `<span>${stocks.length}</span> ตัว &middot; ใกล้ S1: <span style="color:var(--red)">${nearCount}</span>`;
     
-    elStockList.innerHTML = stocks.map(s => createStockCard(s)).join('');
+    // [Optimized for Mobile] Incremental Rendering
+    elStockList.innerHTML = '';
+    const CHUNK_SIZE = 40;
+    let currentIdx = 0;
+    
+    function renderChunk() {
+        const chunk = stocks.slice(currentIdx, currentIdx + CHUNK_SIZE);
+        if (!chunk.length) return;
+        
+        const html = chunk.map(s => createStockCard(s)).join('');
+        elStockList.insertAdjacentHTML('beforeend', html);
+        
+        currentIdx += CHUNK_SIZE;
+        if (currentIdx < stocks.length) {
+            requestAnimationFrame(renderChunk);
+        }
+    }
+    renderChunk();
 }
 
 function createStockCard(s) {
@@ -1325,7 +1342,6 @@ async function updateFearGreedBadge() {
         const badge = document.getElementById('fg-badge');
         if (!badge) return;
 
-        
         const resp = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata', {
             headers: {
                 'Origin': 'https://edition.cnn.com',
@@ -1336,7 +1352,6 @@ async function updateFearGreedBadge() {
         const raw = await resp.json();
         if (!raw.fear_and_greed) throw new Error('Bad structure');
         
-        // แปลง rating ให้เป็นภาษาไทย (Capitalized)
         const ratingMap = {
             'extreme fear': 'Extreme Fear',
             'fear': 'Fear',
@@ -1351,204 +1366,44 @@ async function updateFearGreedBadge() {
             rating: ratingMap[ratingLower] || raw.fear_and_greed.rating 
         };
 
-        
-        // กำหนดสีและ Emoji ตามคะแนน
-        let color = '#94a3b8'; // Neutral (Gray)
+        let color = '#94a3b8'; 
         let emoji = '😐';
         
-        if (data.score <= 24) { color = '#ef4444'; emoji = '😱'; } // Extreme Fear (Red)
-        else if (data.score <= 44) { color = '#f97316'; emoji = '😨'; } // Fear (Orange)
-        else if (data.score <= 55) { color = '#94a3b8'; emoji = '😐'; } // Neutral (Gray)
-        else if (data.score <= 75) { color = '#22c55e'; emoji = '😏'; } // Greed (Green)
-        else { color = '#eab308'; emoji = '🤑'; } // Extreme Greed (Gold)
+        if (data.score <= 24) { color = '#ef4444'; emoji = '😱'; } 
+        else if (data.score <= 44) { color = '#f97316'; emoji = '😨'; } 
+        else if (data.score <= 55) { color = '#94a3b8'; emoji = '😐'; } 
+        else if (data.score <= 75) { color = '#22c55e'; emoji = '😏'; } 
+        else { color = '#eab308'; emoji = '🤑'; } 
 
-        // อัปเดต DOM
         document.getElementById('fg-emoji').textContent = emoji;
         document.getElementById('fg-label').textContent = data.rating;
         document.getElementById('fg-score').textContent = data.score;
         
-        // อัปเดต CSS Variables สำหรับสี
         badge.style.setProperty('--fg-color', color);
+        badge.style.opacity = '1';
+        badge.style.transform = 'translateY(0)';
         
-        // แปลง HEX เป็น RGB สำหรับเงา (glow)
-        let r=0, g=0, b=0;
-        if(color.length === 7) {
-            r = parseInt(color.substring(1,3), 16);
-            g = parseInt(color.substring(3,5), 16);
-            b = parseInt(color.substring(5,7), 16);
+        // --- NEW: Sync back to Google Apps Script cache ---
+        if (API_URL) {
+            const payload = {
+                score: data.score,
+                rating: data.rating,
+                vix: raw.market_volatility_vix ? Math.round(raw.market_volatility_vix.score) : null
+            };
+            fetch(API_URL + '?action=syncFearGreed&payload=' + encodeURIComponent(JSON.stringify(payload)), { mode: 'no-cors' }).catch(() => {});
         }
-        badge.style.setProperty('--fg-glow', `rgba(${r},${g},${b}, 0.3)`);
         
-        // แสดงป้าย
-        badge.style.display = 'inline-flex';
-        
-    } catch (e) {
-        console.error('Fear & Greed fetch error:', e);
-        const badge = document.getElementById('fg-badge');
-        if (badge) badge.style.display = 'none';
+    } catch (err) {
+        console.error('Fear & Greed Error:', err);
     }
 }
 
-// โหลดครั้งแรกเมื่อเปิดหน้าเว็บ และตั้งเวลาอัปเดตทุก 15 นาที
 document.addEventListener('DOMContentLoaded', () => {
+    // ดึงครั้งแรกเมื่อเปิดเว็บ
     updateFearGreedBadge();
-    setInterval(updateFearGreedBadge, 15 * 60 * 1000);
+    // ดึงใหม่ทุก 1 ชั่วโมง (3,600,000 ms) ตามที่ตั้งไว้เพื่อประหยัดโควตา
+    setInterval(updateFearGreedBadge, 3600000);
 });
-
-// --- Layout Toggles ---
-function toggleLeftPanel() {
-    const leftPanel = document.getElementById('list-panel');
-    const icon = document.getElementById('panel-toggle-icon');
-    
-    if (!leftPanel || !icon) return;
-    
-    leftPanel.classList.toggle('collapsed');
-    
-    if (leftPanel.classList.contains('collapsed')) {
-        icon.className = 'ri-arrow-right-s-line';
-    } else {
-        icon.className = 'ri-arrow-left-s-line';
-    }
-}
-
-
-let _syncTimer = null;
-function syncFavWatchToBackend() {
-    clearTimeout(_syncTimer);
-    _syncTimer = setTimeout(() => {
-        let watchLinesPayload = encodeURIComponent(JSON.stringify(globalWatchLines || {}));
-        fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.map(encodeURIComponent).join(',')}&watch=${watchlist.map(encodeURIComponent).join(',')}&watchLines=${watchLinesPayload}`)
-            .then(res => { if (!res.ok) throw new Error('Sync API Error: ' + res.status); return res.json(); })
-            .catch(e => console.log('Sync failed', e));
-    }, 1000);
-}
-
-// Global Event Delegation for Stock List
-elStockList.addEventListener('click', (e) => {
-    const card = e.target.closest('.stock-card');
-    if (!card) return;
-    const symbol = card.dataset.symbol;
-    if (!symbol) return;
-    
-    if (e.target.closest('.sc-watch')) {
-        e.stopPropagation();
-        toggleWatchlist(symbol);
-        if (!currentMover) renderList(); // Re-render if in normal list to update sort/filter
-        return;
-    }
-    if (e.target.closest('.sc-star')) {
-        e.stopPropagation();
-        toggleFavorite(symbol);
-        if (!currentMover) renderList(); // Re-render if in normal list to update sort/filter
-        return;
-    }
-    
-    document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
-    openDetail(symbol);
-});
-
-// Register Service Worker for PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
-      console.log('ServiceWorker registration successful');
-    }).catch(err => {
-      console.log('ServiceWorker registration failed: ', err);
-    });
-  });
-}
-
-function getCustomWatchLines() {
-    return globalWatchLines[currentSymbol] || [];
-}
-function saveCustomWatchLines(lines) {
-    globalWatchLines[currentSymbol] = lines;
-    safeSet('SP_WATCH_LINES', JSON.stringify(globalWatchLines));
-    renderWatchLinesUI();
-    syncFavWatchToBackend();
-}
-function renderWatchLinesUI() {
-    const lines = getCustomWatchLines();
-    const container = document.getElementById('watch-lines-list');
-    if(!container) return;
-    container.innerHTML = lines.map((price, i) => `<span class="tag purple" style="cursor:pointer; background:#8b5cf640;" onclick="removeWatchLine(${i})"><i class="ri-close-line"></i> $${price}</span>`).join('');
-}
-function removeWatchLine(index) {
-    let lines = getCustomWatchLines();
-    lines.splice(index, 1);
-    saveCustomWatchLines(lines);
-    if(priceChart) addChartAnnotations();
-}
-
-
-// --- TradingView style shortcuts for Watch Lines ---
-let currentHoverPrice = null;
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Add wait for element to ensure canvas exists
-    setTimeout(() => {
-        const canvas = document.getElementById('priceChart');
-        if (canvas) {
-            canvas.addEventListener('mousemove', (e) => {
-                if (priceChart && priceChart.scales.y) {
-                    currentHoverPrice = priceChart.scales.y.getValueForPixel(e.offsetY);
-                }
-            });
-            canvas.addEventListener('mouseleave', () => {
-                currentHoverPrice = null;
-            });
-            
-            // Double Click to add line
-            canvas.addEventListener('dblclick', (e) => {
-                if (priceChart && priceChart.scales.y) {
-                    let p = priceChart.scales.y.getValueForPixel(e.offsetY);
-                    addCustomWatchLineByPrice(p);
-                }
-            });
-            
-            // Mobile Long Press (Hammer.js)
-            if (typeof Hammer !== 'undefined') {
-                const mc = new Hammer.Manager(canvas);
-                mc.add(new Hammer.Press({ time: 500 })); // 500ms hold
-                mc.on('press', (e) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const offsetY = e.center.y - rect.top;
-                    if (priceChart && priceChart.scales.y) {
-                        let p = priceChart.scales.y.getValueForPixel(offsetY);
-                        addCustomWatchLineByPrice(p);
-                        if (navigator.vibrate) navigator.vibrate(50); // Tactile feedback
-                    }
-                });
-            }
-        }
-    }, 1500); // Wait for chart to init
-});
-
-// Alt + H to add line
-document.addEventListener('keydown', (e) => {
-    if (e.altKey && (e.key === 'h' || e.key === 'H')) {
-        if (currentHoverPrice !== null) {
-            e.preventDefault();
-            addCustomWatchLineByPrice(currentHoverPrice);
-        }
-    }
-});
-
-function addCustomWatchLineByPrice(rawPrice) {
-    let p = Math.round(rawPrice * 100) / 100;
-    if (p > 0) {
-        let lines = getCustomWatchLines();
-        if(!lines.includes(p)) {
-            lines.push(p);
-            saveCustomWatchLines(lines);
-            if(priceChart && true) {
-                addChartAnnotations();
-            }
-        }
-    }
-}
-
 
 // ================== PRICE ALERT SYSTEM ==================
 let lastCheckedPrices = {};
