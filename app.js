@@ -1456,6 +1456,2545 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// --- Safe Storage ---
+function safeGet(key, defaultVal) {
+    try { return localStorage.getItem(key) || defaultVal; } 
+    catch(e) { return defaultVal; }
+}
+function safeSet(key, val) {
+    try { localStorage.setItem(key, val); } 
+    catch(e) { }
+}
+
+// --- XSS Protection ---
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// --- Constants & State ---
+let API_URL = safeGet('SP_API_URL', '') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec';
+let allStocks = [];
+let favorites = JSON.parse(safeGet('SP_FAVS', '[]') || '[]');
+let watchlist = JSON.parse(safeGet('SP_WATCH', '[]') || '[]');
+let currentSymbol = '';
+let globalWatchLines = {}; // Store all cross-device watch lines
+let currentRange = '1M';
+let currentSector = 'ทั้งหมด';
+let currentIndex = 'all';
+let priceChart = null;
+let latestChartArgs = null;
+let currentLevelsData = null;
+let currentScreener = null;
+let currentCapFilter = 'ALL';
+let currentTrendFilter = 'ALL';
+let currentVolFilter = 'ALL';
+
+// --- DOM Elements ---
+const elStockList = document.getElementById('stock-list');
+const elSearchInput = document.getElementById('search-input');
+const elStatsBar = document.getElementById('stats-bar');
+const elDetailPanel = document.getElementById('detail-panel');
+const elEmptyState = document.getElementById('empty-state');
+const elDetailContent = document.getElementById('detail-content');
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    setupEventListeners();
+    
+    if (!API_URL) {
+        showConfigModal();
+    } else {
+        fetchStocks();
+    }
+});
+
+// --- Theme Management ---
+function initTheme() {
+    const savedTheme = safeGet('SP_THEME', 'dark') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        safeSet('SP_THEME', next);
+        if (priceChart && latestChartArgs) {
+            renderChart(latestChartArgs.points, latestChartArgs.emaData, latestChartArgs.livePrice);
+        }
+    });
+}
+
+// --- Configuration Modal ---
+function showConfigModal() {
+    const modal = document.getElementById('config-modal');
+    modal.classList.add('active');
+    
+    document.getElementById('btn-save-api').addEventListener('click', () => {
+        const url = document.getElementById('api-url-input').value.trim();
+        if (url) {
+            API_URL = url;
+            safeSet('SP_API_URL', url);
+            modal.classList.remove('active');
+            fetchStocks();
+        }
+    });
+}
+
+// --- Event Listeners ---
+let currentMover = null; // 'day_gainers' | 'day_losers' | 'most_actives' | null
+let moverCache = {};
+
+function setupEventListeners() {
+    // Refresh Button
+    let isRefreshing = false;
+    document.getElementById('refresh-btn').addEventListener('click', async () => {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        
+        const icon = document.querySelector('#refresh-btn i');
+        icon.classList.add('rotating');
+        
+        try {
+            await fetchStocks();
+            if (currentSymbol) {
+                await Promise.all([
+                    loadLiveLevels(),
+                    loadChartData()
+                ]);
+            }
+        } finally {
+            icon.classList.remove('rotating');
+            isRefreshing = false;
+        }
+    });
+
+    // Search (debounced)
+    let _searchTimer = null;
+    elSearchInput.addEventListener('input', () => {
+        if (currentMover) return; // disable search in mover mode
+        clearTimeout(_searchTimer);
+        _searchTimer = setTimeout(() => renderList(), 200);
+    });
+    
+    // Index Tabs (ทั้งหมด, S&P500, NASDAQ, NYSE, โปรด)
+    document.querySelectorAll('.filter-tabs:not(.mover-tabs) .tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Deactivate mover tabs
+            currentMover = null;
+            document.querySelectorAll('.mover-btn').forEach(b => b.classList.remove('active'));
+            
+            // Activate index tab
+            document.querySelectorAll('.filter-tabs:not(.mover-tabs) .tab-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            currentIndex = e.currentTarget.dataset.idx;
+            currentSector = 'ทั้งหมด';
+            buildSectorTabs();
+            renderList();
+        });
+    });
+
+    // Market Mover Tabs (Gainers, Losers, Active)
+    document.querySelectorAll('.mover-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const moverId = e.currentTarget.dataset.mover;
+            
+            // If clicking same active mover, deactivate and go back to normal
+            if (currentMover === moverId) {
+                currentMover = null;
+                e.currentTarget.classList.remove('active');
+                renderList();
+                return;
+            }
+            
+            // Deactivate index tabs
+            document.querySelectorAll('.filter-tabs:not(.mover-tabs) .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.mover-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            
+            currentMover = moverId;
+            fetchMarketMovers(moverId);
+        });
+    });
+    
+    // Range Tabs
+    document.querySelectorAll('.range-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (!currentSymbol) return;
+            document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentRange = e.target.dataset.range;
+            loadChartData();
+        });
+    });
+    
+    // Mobile Back Button
+    document.getElementById('btn-back').addEventListener('click', () => {
+        elDetailPanel.classList.remove('active');
+        document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
+    });
+
+    // Reset Zoom
+    document.getElementById('btn-reset-zoom').addEventListener('click', () => {
+        if(priceChart) priceChart.resetZoom();
+    });
+
+    // Sector Custom Dropdown
+    const sectorDropdown = document.getElementById('sector-dropdown');
+    const sectorToggle = document.getElementById('sector-toggle');
+    const sectorMenu = document.getElementById('sector-menu');
+    const sectorLabel = document.getElementById('sector-label');
+
+    if (sectorToggle) {
+        sectorToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sectorDropdown.classList.toggle('open');
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (sectorDropdown && !sectorDropdown.contains(e.target)) {
+            sectorDropdown.classList.remove('open');
+        }
+    });
+    
+    // Favorite Button in Detail
+    document.getElementById('d-fav-btn').addEventListener('click', () => {
+        if (!currentSymbol) return;
+        toggleFavorite(currentSymbol);
+        
+        // Update button UI
+        const isFav = favorites.includes(currentSymbol);
+        const btn = document.getElementById('d-fav-btn');
+        btn.classList.toggle('is-fav', isFav);
+        btn.innerHTML = isFav ? '<i class="ri-star-fill"></i>' : '<i class="ri-star-line"></i>';
+        
+        if (!currentMover) renderList();
+    });
+
+    // Watch Button in Detail
+    document.getElementById('d-watch-btn').addEventListener('click', () => {
+        if (!currentSymbol) return;
+        toggleWatchlist(currentSymbol);
+        
+        // Update button UI
+        const isWatch = watchlist.includes(currentSymbol);
+        const btn = document.getElementById('d-watch-btn');
+        btn.classList.toggle('is-watch', isWatch);
+        btn.innerHTML = isWatch ? '<i class="ri-eye-fill"></i>' : '<i class="ri-eye-line"></i>';
+        
+        if (!currentMover) renderList();
+    });
+}
+
+// --- Data Fetching ---
+async function fetchStocks() {
+    try {
+        const res = await fetch(`${API_URL}?action=getStockList`);
+        if (!res.ok) throw new Error('API Error: ' + res.status);
+        const data = await res.json();
+        
+        if (data.success) {
+            allStocks = data.data || [];
+            if (data.favs) {
+                favorites = data.favs;
+                safeSet('SP_FAVS', JSON.stringify(favorites));
+            }
+            if (data.watch) {
+                watchlist = data.watch;
+                safeSet('SP_WATCH', JSON.stringify(watchlist));
+            }
+            // Load cross-device watch lines from backend
+            if (data.watchLines) {
+                try { globalWatchLines = JSON.parse(data.watchLines); } catch(e) { globalWatchLines = {}; }
+            } else {
+                try { globalWatchLines = JSON.parse(safeGet('SP_WATCH_LINES', '{}') || '{}'); } catch(e) { globalWatchLines = {}; }
+            }
+
+            buildSectorTabs();
+            renderList();
+            
+            // Asynchronously fetch Pre/Post Market prices and Market Cap to not block UI
+            fetchAsyncQuotes();
+        } else {
+            showErrorList(data.error || 'Failed to load data');
+        }
+    } catch (err) {
+        showErrorList('Network Error. Please check API URL. ' + err.message);
+        if(!API_URL) showConfigModal();
+    }
+}
+
+let isFetchingQuotes = false;
+async function fetchAsyncQuotes() {
+    if (isFetchingQuotes) return;
+    isFetchingQuotes = true;
+    try {
+        // Collect visible symbols or a subset to not overload. Here we take all regular symbols.
+        const symbols = allStocks.map(s => s.symbol).filter(s => !s.includes('.BK') && !s.startsWith('GPF'));
+        if (symbols.length === 0) return;
+        
+        const chunkSize = 50;
+        const chunks = [];
+        for (let i = 0; i < symbols.length; i += chunkSize) {
+            chunks.push(symbols.slice(i, i + chunkSize));
+        }
+        
+        const promises = chunks.map(async (chunk) => {
+            const res = await fetch(`${API_URL}?action=getBulkQuotes&symbols=${chunk.map(encodeURIComponent).join(',')}`);
+            if (!res.ok) throw new Error('API Error: ' + res.status);
+            return await res.json();
+        });
+        
+        const results = await Promise.all(promises);
+        
+        let extMap = {};
+        for (const r of results) {
+            if (r.success && r.data) {
+                Object.assign(extMap, r.data);
+            }
+        }
+        
+        let updated = false;
+        for (const s of allStocks) {
+            if (extMap[s.symbol]) {
+                const q = extMap[s.symbol];
+                if (q.price) s.price = q.price;
+                if (q.marketCap) s.marketCap = q.marketCap;
+                if (q.volume) s.volume = q.volume;
+                if (q.avgVolume) s.avgVolume = q.avgVolume;
+                if (q.regChangePct != null) s.regChangePct = q.regChangePct;
+                if (q.dayHigh != null) s.dayHigh = q.dayHigh;
+                if (q.extPrice) {
+                    s.extPrice = q.extPrice;
+                    s.extChangePct = q.extChangePct;
+                    s.extType = q.extType;
+                }
+                updated = true;
+            }
+        }
+        if (updated) {
+            renderList(); // Re-render list to show prices and apply any active screener
+        }
+    } catch (err) {
+        console.error("Bulk Quotes Error:", err);
+    } finally {
+        isFetchingQuotes = false;
+    }
+}
+
+function showErrorList(msg) {
+    elStockList.innerHTML = `<div class="loader-container"><i class="ri-error-warning-line" style="font-size:32px;color:var(--red);"></i><p>${escapeHtml(msg)}</p></div>`;
+}
+
+// --- Screener Logic ---
+function toggleScreener() {
+    const panel = document.getElementById('screener-panel');
+    const btn = document.getElementById('screener-toggle-btn');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'flex';
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="ri-filter-3-fill"></i>';
+    } else {
+        panel.style.display = 'none';
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="ri-filter-3-line"></i>';
+    }
+}
+
+function updateScreenerBadge() {
+    const btn = document.getElementById('screener-toggle-btn');
+    if (!btn) return;
+    if (currentScreener || currentCapFilter !== 'ALL') {
+        btn.style.color = 'var(--primary)';
+        btn.style.borderColor = 'var(--primary)';
+    } else {
+        btn.style.color = '';
+        btn.style.borderColor = '';
+    }
+}
+
+function applyScreener(preset) {
+    currentScreener = currentScreener === preset ? null : preset;
+    document.querySelectorAll('#sc-buy_dip, #sc-breakout, #sc-upside, #sc-day_high').forEach(btn => btn.classList.remove('active'));
+    if (currentScreener) {
+        document.getElementById('sc-' + preset).classList.add('active');
+    }
+    updateScreenerBadge();
+    renderList();
+}
+
+function setTrendFilter(trend) {
+    currentTrendFilter = trend;
+    document.querySelectorAll('.trend-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('trend-' + trend).classList.add('active');
+    updateScreenerBadge();
+    renderList();
+}
+
+function setVolFilter(vol) {
+    currentVolFilter = vol;
+    document.querySelectorAll('.vol-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('vol-' + vol).classList.add('active');
+    updateScreenerBadge();
+    renderList();
+}
+
+function setCapFilter(cap) {
+    currentCapFilter = cap;
+    document.querySelectorAll('.cap-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('cap-' + cap).classList.add('active');
+    updateScreenerBadge();
+    renderList();
+}
+
+function clearScreener() {
+    currentScreener = null;
+    currentCapFilter = 'ALL';
+    currentTrendFilter = 'ALL';
+    currentVolFilter = 'ALL';
+    document.querySelectorAll('#screener-panel .sc-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById('cap-ALL')?.classList.add('active');
+    document.getElementById('trend-ALL')?.classList.add('active');
+    document.getElementById('vol-ALL')?.classList.add('active');
+    
+    updateScreenerBadge();
+    renderList();
+}
+
+// --- List Rendering ---
+function buildSectorTabs() {
+    const filtered = allStocks.filter(s => {
+        if (currentIndex === 'all') return true;
+        const angels = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'];
+          if (currentIndex === '7MAG') return angels.includes(s.symbol);
+          if (currentIndex === 'GPF') return s.index === 'GPF';
+          if (currentIndex === 'S&P500') return s.index === 'S&P500' || s.index === 'Both';
+          if (currentIndex === 'NASDAQ100') return s.index === 'NASDAQ100' || s.index === 'Both';
+          return s.index === currentIndex;
+    });
+    const sectors = ['ทั้งหมด', ...new Set(filtered.map(s => s.sector).filter(Boolean))];
+    
+    const sectorMenu = document.getElementById('sector-menu');
+    const sectorLabel = document.getElementById('sector-label');
+    const sectorDropdown = document.getElementById('sector-dropdown');
+    
+    if (!sectorMenu) return;
+    
+    sectorMenu.innerHTML = sectors.map(s => 
+        `<div class="dropdown-item ${s === currentSector ? 'active' : ''}" data-value="${escapeHtml(s)}">
+            ${s === 'ทั้งหมด' ? 'All Sectors (ทั้งหมด)' : escapeHtml(s)}
+        </div>`
+    ).join('');
+
+    if (sectorLabel) {
+        sectorLabel.textContent = currentSector === 'ทั้งหมด' ? 'All Sectors (ทั้งหมด)' : currentSector;
+    }
+
+    sectorMenu.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            currentSector = e.currentTarget.getAttribute('data-value');
+            sectorDropdown.classList.remove('open');
+            renderList();
+        });
+    });
+}
+
+let currentSort = 'auto'; // 'auto', 'az', 's1'
+
+function toggleSort() {
+    if (currentSort === 'auto') currentSort = 'az';
+    else if (currentSort === 'az') currentSort = 's1';
+    else currentSort = 'auto';
+    
+    const btn = document.getElementById('sort-btn');
+    if (btn) {
+        if (currentSort === 'auto') btn.innerHTML = '<i class="ri-magic-line"></i> Auto';
+        else if (currentSort === 'az') btn.innerHTML = '<i class="ri-sort-asc"></i> A-Z';
+        else btn.innerHTML = '<i class="ri-funds-line"></i> S1';
+    }
+    renderList();
+}
+
+function renderList() {
+    const query = elSearchInput.value.trim().toUpperCase();
+    
+    let stocks = allStocks.filter(s => {
+        if (currentIndex === 'fav') return favorites.includes(s.symbol);
+        if (currentIndex === 'watch') return watchlist.includes(s.symbol);
+        const angels = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'];
+          if (currentIndex === '7MAG' && !angels.includes(s.symbol)) return false;
+          if (currentIndex === 'S&P500' && s.index !== 'S&P500' && s.index !== 'Both') return false;
+          if (currentIndex === 'NASDAQ100' && s.index !== 'NASDAQ100' && s.index !== 'Both') return false;
+          if (currentIndex !== 'all' && currentIndex !== '7MAG' && currentIndex !== 'S&P500' && currentIndex !== 'NASDAQ100' && s.index !== currentIndex) return false;
+        if (currentSector !== 'ทั้งหมด' && s.sector !== currentSector) return false;
+        if (query) {
+            if (!(s.symbol.includes(query) || (s.name || '').toUpperCase().includes(query))) return false;
+        }
+        
+        // Screener Filters
+        if (currentTrendFilter !== 'ALL') {
+            const trendStr = (s.status || '').toLowerCase();
+            if (currentTrendFilter === 'BULL' && !trendStr.includes('up')) return false;
+            if (currentTrendFilter === 'BEAR' && !trendStr.includes('down')) return false;
+            if (currentTrendFilter === 'SIDEWAYS' && !trendStr.includes('sideways')) return false;
+        }
+        
+        if (currentVolFilter === 'HIGH') {
+            if (!s.volume || !s.avgVolume || s.volume < s.avgVolume * 1.0) return false;
+        }
+        
+        if (currentCapFilter !== 'ALL') {
+            const cap = Number(s.marketCap) || 0;
+            if (currentCapFilter === 'MEGA' && cap < 200000000000) return false;
+            if (currentCapFilter === 'LARGE' && (cap < 10000000000 || cap >= 200000000000)) return false;
+            if (currentCapFilter === 'MID' && (cap < 2000000000 || cap >= 10000000000)) return false;
+            if (currentCapFilter === 'SMALL' && cap >= 2000000000) return false;
+        }
+        
+        if (currentScreener === 'buy_dip') {
+            const pS1 = s.pctS1 != null ? s.pctS1 : -999;
+            const pS2 = s.pctS2 != null ? s.pctS2 : -999;
+            if (!((pS1 >= -0.03 && pS1 <= 0.03) || (pS2 >= -0.03 && pS2 <= 0.03))) return false;
+        } else if (currentScreener === 'breakout') {
+            const pR1 = s.pctR1 != null ? s.pctR1 : 999;
+            const pR2 = s.pctR2 != null ? s.pctR2 : 999;
+            if (!((pR1 >= -0.05 && pR1 <= 0.05) || (pR2 >= -0.05 && pR2 <= 0.05))) return false;
+        } else if (currentScreener === 'upside') {
+            const pR1 = s.pctR1 != null ? s.pctR1 : 0;
+            if (pR1 < 0.10) return false;
+        } else if (currentScreener === 'day_high') {
+            if (!s.dayHigh || !s.price) return false;
+            const distToHigh = (s.price - s.dayHigh) / s.dayHigh;
+            if (distToHigh < -0.015) return false; // Must be within 1.5% of Day High
+        }
+        
+        return true;
+    });
+    
+    // Adaptive Sorting Logic
+    const isMoverTab = ['day_gainers', 'day_losers', 'most_actives', 'trending_now'].includes(currentIndex);
+    
+    if (!isMoverTab) {
+        let effectiveSort = currentSort;
+        if (effectiveSort === 'auto') {
+            // Adaptive defaults based on tab
+            if (['fav', 'watch'].includes(currentIndex)) {
+                effectiveSort = 's1';
+            } else if (['7MAG', 'all', 'S&P500', 'NASDAQ100', 'NYSE'].includes(currentIndex)) {
+                effectiveSort = 'az';
+            } else {
+                effectiveSort = 'az'; // Default for sectors
+            }
+        }
+        
+        if (effectiveSort === 'az') {
+            stocks.sort((a, b) => (a.symbol || '').localeCompare(b.symbol || ''));
+        } else {
+            // Sort by closeness to Support 1
+            stocks.sort((a, b) => {
+                if (a.pctS1 == null && b.pctS1 == null) return 0;
+                if (a.pctS1 == null) return 1;
+                if (b.pctS1 == null) return -1;
+                return Math.abs(a.pctS1) - Math.abs(b.pctS1);
+            });
+        }
+    }
+    
+    if (!stocks.length) {
+        elStockList.innerHTML = `<div class="loader-container"><p>ไม่พบข้อมูลหุ้น</p></div>`;
+        elStatsBar.innerHTML = `แสดง <span>0</span> หุ้น`;
+        return;
+    }
+    
+    const nearCount = stocks.filter(s => s.pctS1 != null && Math.abs(s.pctS1 * 100) < 5).length;
+    elStatsBar.innerHTML = `<span>${stocks.length}</span> ตัว &middot; ใกล้ S1: <span style="color:var(--red)">${nearCount}</span>`;
+    
+    elStockList.innerHTML = stocks.map(s => createStockCard(s)).join('');
+}
+
+function createStockCard(s) {
+    const priceStr = s.price != null ? '
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});
+ + s.price.toFixed(2) : '—';
+    const pct = s.pctS1 != null ? s.pctS1 * 100 : null;
+    const absPct = pct != null ? Math.abs(pct) : null;
+    let colorClass = '', pctClass = 'ok', pctStr = '—';
+    
+    if (pct != null) {
+        pctStr = 'S1: ' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        if (absPct < 1) { colorClass = 'near'; pctClass = 'near'; }
+        else if (absPct < 3) { colorClass = 'close'; pctClass = 'close'; }
+    }
+    
+    const isFav = favorites.includes(s.symbol);
+    const isWatch = watchlist.includes(s.symbol);
+    const logoUrl = `https://financialmodelingprep.com/image-stock/${s.symbol}.png`;
+    const initials = s.symbol.substring(0, 3);
+    
+    let levelsHtml = '';
+    if (s.s1 != null) levelsHtml += `<span class="chip s">S1 ${s.s1.toFixed(0)}</span>`;
+    if (s.r1 != null) levelsHtml += `<span class="chip r">R1 ${s.r1.toFixed(0)}</span>`;
+    
+    let regPctStr = '';
+    if (s.regChangePct != null) {
+        const isUp = s.regChangePct >= 0;
+        regPctStr = `<span class="sc-pct ${isUp ? 'ok' : 'near'} mono">${isUp ? '+' : ''}${s.regChangePct.toFixed(2)}%</span>`;
+    }
+
+    let idxBadge = '';
+    if (s.index === 'NASDAQ100') idxBadge = 'idx-nq';
+    else if (s.index === 'Both') idxBadge = 'idx-both';
+    else idxBadge = 'idx-sp';
+
+    return `
+    <div class="stock-card ${colorClass} ${currentSymbol === s.symbol ? 'active' : ''}" data-symbol="${escapeHtml(s.symbol)}">
+        <div class="sc-logo-wrapper">
+            <button class="sc-watch ${isWatch ? 'is-watch' : ''}" data-symbol="${escapeHtml(s.symbol)}">
+                <i class="${isWatch ? 'ri-eye-fill' : 'ri-eye-line'}"></i>
+            </button>
+            <button class="sc-star ${isFav ? 'is-fav' : ''}" data-symbol="${escapeHtml(s.symbol)}">
+                <i class="${isFav ? 'ri-star-fill' : 'ri-star-line'}"></i>
+            </button>
+            <img class="sc-logo" src="${logoUrl}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="sc-logo-fallback" style="display:none">${escapeHtml(initials)}</div>
+        </div>
+        
+        <div class="sc-info">
+            <div class="sc-top">
+                <div style="display:flex; align-items:baseline; gap:6px;">
+                    <span class="sc-symbol">${escapeHtml(s.symbol)}</span>
+                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? 'Pre' : 'Post'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <span class="sc-price mono">${priceStr}</span>
+                </div>
+            </div>
+            <div class="sc-mid">
+                <span class="sc-name">${escapeHtml(s.name || '')}</span>
+                ${regPctStr}
+            </div>
+            <div class="sc-bot" style="justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:4px; align-items:center;">
+                    <span class="badge ${idxBadge}">${escapeHtml(s.index === 'Both' ? 'S&P+NQ' : (s.index || 'S&P500'))}</span>
+                    ${levelsHtml}
+                </div>
+                <span class="sc-pct ${pctClass} mono">${pctStr}</span>
+            </div>
+        </div>
+    </div>`;
+}
+
+function toggleFavorite(symbol) {
+    const idx = favorites.indexOf(symbol);
+    if (idx === -1) favorites.push(symbol);
+    else favorites.splice(idx, 1);
+    safeSet('SP_FAVS', JSON.stringify(favorites));
+    syncFavWatchToBackend();
+}
+
+function toggleWatchlist(symbol) {
+    const idx = watchlist.indexOf(symbol);
+    if (idx === -1) watchlist.push(symbol);
+    else watchlist.splice(idx, 1);
+    safeSet('SP_WATCH', JSON.stringify(watchlist));
+    syncFavWatchToBackend();
+}
+
+// --- Detail View ---
+function openDetail(symbol) {
+    const stock = allStocks.find(s => s.symbol === symbol);
+    if (!stock) return;
+    
+    currentSymbol = symbol;
+    if (typeof renderWatchLinesUI === 'function') renderWatchLinesUI();
+    // UI Transitions
+    elEmptyState.classList.add('hidden');
+    elDetailContent.classList.remove('hidden');
+    elDetailPanel.classList.add('active'); // For mobile
+    
+    // Populate Header
+    document.getElementById('d-symbol').textContent = symbol;
+    document.getElementById('d-fullname').textContent = stock.name || '';
+    document.getElementById('d-sector').textContent = stock.sector || '';
+    
+    const idxBadge = document.getElementById('d-idx-badge');
+    idxBadge.textContent = stock.index || 'S&P500';
+    idxBadge.className = 'badge ' + (stock.index === 'NASDAQ100' ? 'idx-nq' : stock.index === 'Both' ? 'idx-both' : 'idx-sp');
+    
+    document.getElementById('d-price').textContent = stock.price ? '
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});
+ + stock.price.toFixed(2) : '—';
+    document.getElementById('d-change').textContent = '-';
+    document.getElementById('d-change').className = 'price-change mono';
+    
+    document.getElementById('d-ext-price').style.display = 'none';
+    document.getElementById('d-ext-price').textContent = '';
+    
+    const isFav = favorites.includes(symbol);
+    const favBtn = document.getElementById('d-fav-btn');
+    favBtn.classList.toggle('is-fav', isFav);
+    favBtn.innerHTML = isFav ? '<i class="ri-star-fill"></i>' : '<i class="ri-star-line"></i>';
+    
+    const isWatch = watchlist.includes(symbol);
+    const watchBtn = document.getElementById('d-watch-btn');
+    watchBtn.classList.toggle('is-watch', isWatch);
+    watchBtn.innerHTML = isWatch ? '<i class="ri-eye-fill"></i>' : '<i class="ri-eye-line"></i>';
+    
+    // Populate Technical Action Center Stats (RSI, S1, R1)
+    const formatPct = (price, level) => {
+        if (!price || !level) return '';
+        const pct = ((level - price) / price) * 100;
+        const colorCls = pct >= 0 ? 'pm-val-green' : 'pm-val-red';
+        return ` <span class="${colorCls}">(${pct>0?'+':''}${pct.toFixed(2)}%)</span>`;
+    };
+
+    let rsiColor = 'var(--text-main)';
+    if (stock.rsi > 70) rsiColor = 'var(--red)';
+    else if (stock.rsi < 30) rsiColor = 'var(--green)';
+    else if (stock.rsi) rsiColor = 'var(--yellow)';
+
+    document.getElementById('d-rsi').innerHTML = stock.rsi ? `<span style="color:${rsiColor}">${stock.rsi.toFixed(2)}</span>` : '—';
+    document.getElementById('d-s1').innerHTML = stock.s1 ? `${stock.s1.toFixed(2)}${formatPct(stock.price, stock.s1)}` : '—';
+    document.getElementById('d-r1').innerHTML = stock.r1 ? `${stock.r1.toFixed(2)}${formatPct(stock.price, stock.r1)}` : '—';
+    
+    // Reset Data areas
+    document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na"><div class="spinner-small"></div> กำลังคำนวณข้อมูล...</span>';
+    document.getElementById('levels-list').innerHTML = '<div class="loader-container"><div class="spinner"></div><p>กำลังวิเคราะห์แนวรับ-ต้าน...</p></div>';
+    document.getElementById('trend-badge-wrap').innerHTML = '';
+    
+    currentLevelsData = null;
+    
+    Promise.all([loadLiveLevels(), loadChartData()]).catch(e => console.error("Error loading detail:", e));
+}
+
+let _levelsAbortController = null;
+async function loadLiveLevels() {
+    if (_levelsAbortController) {
+        _levelsAbortController.abort();
+    }
+    _levelsAbortController = new AbortController();
+    const signal = _levelsAbortController.signal;
+    
+    const requestedSymbol = currentSymbol;
+    try {
+        const res = await fetch(`${API_URL}?action=getLiveLevels&symbol=${encodeURIComponent(requestedSymbol)}`, { signal });
+        if (!res.ok) throw new Error('API Error: ' + res.status);
+        const data = await res.json();
+        
+        if (currentSymbol !== requestedSymbol) return;
+        
+        if (data.success) {
+            currentLevelsData = data;
+            renderLiveLevels(data);
+            if (data.summary) {
+                renderSummary(data.summary);
+            }
+            addChartAnnotations();
+        } else {
+            document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-error-warning-line"></i> ${escapeHtml(data.error)}</p>`;
+            document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na">ไม่สามารถโหลดข้อมูล EMA</span>';
+        }
+    } catch (err) {
+        if (err.name === 'AbortError') return;
+        document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-wifi-off-line"></i> เกิดข้อผิดพลาดในการโหลดข้อมูล</p>`;
+    }
+}
+
+function renderLiveLevels(data) {
+    const price = data.price;
+    const sup = data.supports || [];
+    const rst = data.resists || [];
+    const ema = data.ema;
+    
+    // Price Update
+    if (price) document.getElementById('d-price').textContent = '
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});
+ + price.toFixed(2);
+    if (data.calcTime) document.getElementById('calc-time').textContent = 'อัปเดต: ' + data.calcTime;
+    
+    // Trend Badge
+    const trendMap = {
+        strong_up: ['strong-up', 'ri-arrow-right-up-line', 'Uptrend แข็งแกร่ง (เหนือ EMA200 D+W)'],
+        up: ['up', 'ri-arrow-right-up-line', 'Uptrend (เหนือ EMA200 Daily)'],
+        sideways: ['sideways', 'ri-arrow-right-s-line', 'Sideways (แกว่งตัวรอบ EMA)'],
+        down: ['down', 'ri-arrow-right-down-line', 'Downtrend (ใต้ EMA200 Daily)'],
+        strong_down: ['strong-down', 'ri-arrow-right-down-line', 'Downtrend แข็งแกร่ง (ใต้ EMA200 D+W)']
+    };
+    const [tCls, tIcon, tLabel] = trendMap[data.trend] || ['sideways', 'ri-subtract-line', '—'];
+    document.getElementById('trend-badge-wrap').innerHTML = `<span class="trend-badge ${tCls}"><i class="${tIcon}"></i> ${tLabel}</span>`;
+    
+    // EMA Bar
+    if (ema) {
+        let html = '';
+        if (ema.daily) html += `<span class="ema-chip ${ema.position === 'above' ? 'above' : 'below'}">EMA200D ${ema.daily} (${ema.pctD}%)</span>`;
+        if (ema.weekly) html += `<span class="ema-chip ${parseFloat(ema.pctW) > 0 ? 'above' : 'below'}">EMA200W ${ema.weekly} (${ema.pctW}%)</span>`;
+        document.getElementById('ema-bar').innerHTML = html;
+    } else {
+        document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na">ไม่มีข้อมูล EMA</span>';
+    }
+    
+    // Levels List
+    let html = '';
+    
+    // Resists
+    html += '<div class="section-hdr resist">🔴 แนวต้าน (โซนขาย)</div>';
+    if (!rst.length) html += '<p class="help-text">ไม่พบแนวต้านที่ชัดเจนในระยะใกล้</p>';
+    [...rst].reverse().forEach((r, i) => { html += createLevelRow('resist', 'R' + (rst.length - i), r, price); });
+    
+    // Current Price Marker
+    html += `<div class="price-now-badge"><span class="price-now-inner"><i class="ri-focus-3-line"></i> ราคาปัจจุบัน ${price.toFixed(2)}</span></div>`;
+    
+    // Supports
+    html += '<div class="section-hdr support">🟢 แนวรับ (โซนซื้อ)</div>';
+    if (!sup.length) html += '<p class="help-text">ไม่พบแนวรับที่ชัดเจนในระยะใกล้</p>';
+    sup.forEach((s, i) => { html += createLevelRow('support', 'S' + (i + 1), s, price); });
+    
+    document.getElementById('levels-list').innerHTML = html;
+}
+
+function createLevelRow(type, label, lvl, price) {
+    const pct = ((lvl.price - price) / price * 100);
+    const pctStr = (pct > 0 ? '+' : '') + pct.toFixed(2) + '%';
+    const s = Math.min(lvl.score || 1, 10);
+    const dots = [...Array(10)].map((_, i) => `<span class="sdot ${i < s ? 'on-' + type : 'off'}"></span>`).join('');
+    
+    const mLabel = { 'swing': 'Daily Swing', 'swing_w': 'Weekly Swing', 'fib_ret': 'Fib Ret', 'fib_ext': 'Fib Ext', 'fib': 'Fib Pivot', 'pivot': 'Pivot', 'round': 'Round Number' };
+    const mStr = (lvl.methods || '').split('+').map(m => mLabel[m] || m).join(' • ');
+    
+    let badgesHtml = '';
+    if (lvl.tier) {
+        let tierColor = 'var(--text-muted)';
+        if (lvl.tier === 'S') tierColor = '#8b5cf6';
+        if (lvl.tier === 'A') tierColor = '#3b82f6';
+        if (lvl.tier === 'B') tierColor = '#10b981';
+        if (lvl.tier === 'C') tierColor = '#f59e0b';
+        badgesHtml += `<span class="lvl-badge tier-badge" style="background:${tierColor}20;color:${tierColor};">Tier ${lvl.tier}</span>`;
+    }
+    if (lvl.isConfluence) {
+        badgesHtml += `<span class="lvl-badge conf-badge" style="background:#eab30820;color:#eab308;"><i class="ti ti-star-filled" style="font-size:10px;"></i> Conf</span>`;
+    }
+    if (lvl.testCount >= 3) {
+        badgesHtml += `<span class="lvl-badge test-badge" style="background:#ef444420;color:#ef4444;">Tested ${lvl.testCount}x</span>`;
+    }
+    
+    return `
+    <div class="level-row ${type} glass">
+        <div class="lr-left">
+            <div class="lr-title-row">
+                <span class="lr-label ${type}">${label}</span>
+                ${badgesHtml}
+            </div>
+            <div class="score-bar">${dots}</div>
+            <span class="lr-method">${mStr}</span>
+        </div>
+        <div class="lr-right">
+            <div class="lr-price">${lvl.price.toFixed(2)}</div>
+            <div class="lr-pct ${type}">${pctStr}</div>
+        </div>
+    </div>`;
+}
+
+function renderSummary(summary) {
+    if (!summary) return;
+    
+    // Combined Hero Fundamentals
+    const heroFundBox = document.getElementById('d-hero-fundamentals');
+    if (summary.fundamentals && heroFundBox) {
+        const f = summary.fundamentals;
+        let ratingBadge = '';
+        if (summary.rating) {
+            const r = summary.rating.replace(/_/g, ' ').toUpperCase();
+            let colorClass = 'pm-sell-btn'; // Default
+            if (r.includes('BUY')) colorClass = 'pm-buy-btn';
+            else if (r.includes('HOLD')) colorClass = 'pm-hold-btn';
+            ratingBadge = `<span class="${colorClass}">${r}</span>`;
+        }
+
+        heroFundBox.innerHTML = `
+            ${(f.extPrice != null && f.extChangePct != null) ? `
+            <div class="pm-row pm-ext-row" style="border-bottom: none; justify-content: flex-end;">
+                <div class="pm-val ${f.extChangePct >= 0 ? 'ext-green' : 'ext-red'}">${f.extType === 'PRE' ? '☀️ PRE-MARKET' : '🌙 AFTER-HOURS'}: ${f.extPrice.toFixed(2)} (${f.extChangePct > 0 ? '+' : ''}${f.extChangePct.toFixed(2)}%)</div>
+            </div>` : ''}
+            <div class="pm-row">
+                <div class="pm-label">TARGET</div>
+                <div class="pm-val target-val-group" style="flex-wrap: wrap; gap: 4px;">
+                    <span class="target-val-text">${f.targetMeanPrice !== '-' ? '
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});
+ + escapeHtml(String(f.targetMeanPrice)) : '-'}</span>
+                    <span class="target-upside-text ${f.upsideRaw > 0 ? 'pm-val-green' : 'pm-val-red'}">${f.upsideRaw > 0 ? '+' : ''}${escapeHtml(String(f.upside))}</span>
+                    ${ratingBadge}
+                </div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">P/E RATIO</div>
+                <div class="pm-val">${escapeHtml(String(f.trailingPE || f.pe))}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">MARKET CAP</div>
+                <div class="pm-val">${escapeHtml(String(f.marketCap))}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">DIV YIELD</div>
+                <div class="pm-val">${escapeHtml(String(f.dividendYield || f.divYield))}</div>
+            </div>
+            <div class="pm-row">
+                <div class="pm-label">BETA</div>
+                <div class="pm-val">${escapeHtml(String(f.beta))}</div>
+            </div>
+            <div class="pm-row" style="border-bottom: none;">
+                <div class="pm-label">REV GROWTH</div>
+                <div class="pm-val ${parseFloat(f.revenueGrowth || f.revGrowth) > 0 ? 'pm-val-green' : (parseFloat(f.revenueGrowth || f.revGrowth) < 0 ? 'pm-val-red' : '')}">${escapeHtml(String(f.revenueGrowth || f.revGrowth))}</div>
+            </div>
+        `;
+        heroFundBox.style.display = 'block';
+    } else if (heroFundBox) {
+        heroFundBox.style.display = 'none';
+        heroFundBox.innerHTML = '';
+    }
+
+    // Company Description
+    const descBox = document.getElementById('d-company-desc');
+    if (summary.desc && descBox) {
+        descBox.innerHTML = `<h3><i class="ri-building-4-line"></i> About Company</h3><p>${escapeHtml(summary.desc)}</p>`;
+        descBox.style.display = 'block';
+    } else if (descBox) {
+        descBox.style.display = 'none';
+    }
+}
+
+// --- Chart ---
+let _chartAbortController = null;
+async function loadChartData() {
+    if (_chartAbortController) {
+        _chartAbortController.abort();
+    }
+    _chartAbortController = new AbortController();
+    const signal = _chartAbortController.signal;
+    
+    document.getElementById('chart-loading').classList.add('active');
+    const requestedSymbol = currentSymbol;
+    const requestedRange = currentRange;
+    
+    try {
+        const res = await fetch(`${API_URL}?action=getStockChart&symbol=${encodeURIComponent(requestedSymbol)}&range=${requestedRange}`, { signal });
+        if (!res.ok) throw new Error('API Error: ' + res.status);
+        const data = await res.json();
+        
+        if (currentSymbol !== requestedSymbol || currentRange !== requestedRange) return;
+        
+        document.getElementById('chart-loading').classList.remove('active');
+        
+        if (data.success) {
+            // Update Change Text
+            if (data.currentPrice && data.prevClose) {
+                const chg = data.currentPrice - data.prevClose;
+                const pct = chg / data.prevClose * 100;
+                const sign = chg >= 0 ? '+' : '';
+                const el = document.getElementById('d-change');
+                el.textContent = `${sign}${chg.toFixed(2)} (${sign}${pct.toFixed(2)}%)`;
+                el.className = 'price-change mono ' + (chg >= 0 ? 'up' : 'down');
+            }
+
+            // Update Quote Stats
+            if (data.quote) {
+                const low = data.quote.fiftyTwoWeekLow;
+                const high = data.quote.fiftyTwoWeekHigh;
+                if (low && high && high > low && data.currentPrice) {
+                    document.getElementById('d-52w-low').textContent = `${low.toFixed(2)}`;
+                    document.getElementById('d-52w-high').textContent = `${high.toFixed(2)}`;
+                    let pct = ((data.currentPrice - low) / (high - low)) * 100;
+                    pct = Math.max(0, Math.min(100, pct));
+                    document.getElementById('d-52w-marker').style.left = `${pct}%`;
+                } else {
+                    document.getElementById('d-52w-low').textContent = `—`;
+                    document.getElementById('d-52w-high').textContent = `—`;
+                    document.getElementById('d-52w-marker').style.left = `50%`;
+                }
+
+                const dLow = data.quote.dayLow;
+                const dHigh = data.quote.dayHigh;
+                if (dLow && dHigh && data.currentPrice) {
+                    document.getElementById('d-day-low').textContent = `${dLow.toFixed(2)}`;
+                    document.getElementById('d-day-high').textContent = `${dHigh.toFixed(2)}`;
+                    let pct = ((data.currentPrice - dLow) / (dHigh - dLow)) * 100;
+                    pct = Math.max(0, Math.min(100, pct));
+                    document.getElementById('d-day-marker').style.left = `${pct}%`;
+                } else {
+                    document.getElementById('d-day-low').textContent = `—`;
+                    document.getElementById('d-day-high').textContent = `—`;
+                    document.getElementById('d-day-marker').style.left = `50%`;
+                }
+                
+                if (data.summary) {
+                    const descEl = document.getElementById('d-company-desc');
+                    if (descEl) {
+                        descEl.innerHTML = escapeHtml(data.summary.desc || 'ไม่มีข้อมูล');
+                        descEl.style.display = 'block';
+                    }
+                    
+                    // --- Pre/Post Market Price Update ---
+                    const f = data.summary.fundamentals;
+                    if (f && f.extPrice != null && f.extChangePct != null) {
+                        const extEl = document.getElementById('d-ext-price');
+                        if (extEl) {
+                            const label = f.extType === 'PRE' ? '☀️ Pre-Market' : '🌙 Post-Market';
+                            const sign = f.extChangePct > 0 ? '+' : '';
+                            extEl.textContent = `${label}: ${f.extPrice.toFixed(2)} (${sign}${f.extChangePct.toFixed(2)}%)`;
+                            extEl.style.display = 'block';
+                            extEl.className = 'pm-change mono ' + (f.extChangePct >= 0 ? 'up' : 'down');
+                        }
+                    }
+                    
+                    if (data.summary.fundamentals) {
+                    }
+                }
+            }
+            
+            const emaLabels = (data.emaData || []).map(e => `EMA${e.period}`).join(', ');
+            document.getElementById('ema-label').textContent = emaLabels || 'EMA';
+            
+            latestChartArgs = { points: data.points, emaData: data.emaData || [], livePrice: data.currentPrice };
+            renderChart(data.points, data.emaData || [], data.currentPrice);
+        } else {
+            console.error("Chart API Error:", data.error);
+            const canvas = document.getElementById('priceChart');
+            if (priceChart) { priceChart.destroy(); }
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '14px Inter';
+            ctx.fillStyle = '#ef4444';
+            ctx.textAlign = 'center';
+            ctx.fillText('ไม่สามารถโหลดข้อมูลกราฟได้ (Yahoo API Error)', canvas.width/2, canvas.height/2);
+        }
+    } catch (err) {
+        if (err.name === 'AbortError') return;
+        document.getElementById('chart-loading').classList.remove('active');
+        console.error(err);
+        const canvas = document.getElementById('priceChart');
+        if (priceChart) { priceChart.destroy(); }
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '14px Inter';
+        ctx.fillStyle = '#ef4444';
+        ctx.textAlign = 'center';
+        ctx.fillText('เกิดข้อผิดพลาดในการโหลดกราฟ', canvas.width/2, canvas.height/2);
+    }
+}
+
+function calcRSI(prices, period = 14) {
+    if (prices.length < period + 1) return null;
+    let avgG = 0, avgL = 0;
+    for (let i = 1; i <= period; i++) { const d = prices[i] - prices[i-1]; d > 0 ? avgG += d : avgL -= d; }
+    avgG /= period; avgL /= period;
+    for (let i = period + 1; i < prices.length; i++) {
+        const d = prices[i] - prices[i-1];
+        avgG = (avgG * 13 + (d > 0 ? d : 0)) / 14;
+        avgL = (avgL * 13 + (d < 0 ? -d : 0)) / 14;
+    }
+    return Math.round((100 - 100 / (1 + avgG / (avgL || 0.0001))) * 100) / 100;
+}
+
+function renderChart(points, emaData, livePrice) {
+    const canvas = document.getElementById('priceChart');
+    if (priceChart) { priceChart.destroy(); }
+    
+    if (!points || !points.length) return;
+    
+    const closes = points.map(p => p.close);
+    const labels = points.map(p => p.label);
+    
+    // RSI
+    const rsi = calcRSI(closes);
+    const rsiEl = document.getElementById('d-rsi');
+    if (rsi != null) {
+        let c = rsi < 30 ? 'var(--green)' : rsi > 70 ? 'var(--red)' : 'var(--text-main)';
+        rsiEl.innerHTML = `<span style="color:${c}">${rsi}</span>`;
+    } else {
+        rsiEl.textContent = '—';
+    }
+    
+    // Colors based on theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+    
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, isDark ? 'rgba(59,130,246,0.3)' : 'rgba(37,99,235,0.2)');
+    grad.addColorStop(1, 'rgba(59,130,246,0.0)');
+    
+    const datasets = [{
+        label: 'Price',
+        data: closes,
+        borderColor: isDark ? '#3b82f6' : '#2563eb',
+        borderWidth: 2,
+        backgroundColor: grad,
+        fill: true,
+        tension: 0.1,
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        pointHitRadius: 10
+    }];
+    
+    const emaColors = ['#eab308', '#f97316', '#8b5cf6'];
+    
+    if (emaData && emaData.length > 0) {
+        emaData.forEach((ema, idx) => {
+            datasets.push({
+                label: `EMA${ema.period}`,
+                data: ema.series,
+                borderColor: emaColors[idx % emaColors.length],
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 0
+            });
+        });
+    }
+
+    const isMobile = window.innerWidth <= 768;
+    const hideTicks = isMobile && (currentRange === '1H' || currentRange === '4H');
+
+    priceChart = new Chart(canvas, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isDark ? 'rgba(24,24,27,0.9)' : 'rgba(255,255,255,0.9)',
+                    titleColor: isDark ? '#f8fafc' : '#0f172a',
+                    bodyColor: isDark ? '#f8fafc' : '#0f172a',
+                    borderColor: isDark ? '#3f3f46' : '#e2e8f0',
+                    borderWidth: 1,
+                    padding: 12,
+                    titleFont: { family: 'Inter', size: 12 },
+                    bodyFont: { family: 'IBM Plex Mono', size: 14, weight: '600' },
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}`
+                    }
+                },
+                zoom: {
+                    pan: { enabled: true, mode: 'x' },
+                    pan: { enabled: true, mode: 'x' },
+                    zoom: {
+                        wheel: { enabled: true, modifierKey: 'ctrl' },
+                        pinch: { enabled: true },
+                        mode: 'x'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { display: !hideTicks, color: textColor, maxTicksLimit: 6, font: { size: 11 }, align: 'inner' }, bounds: 'data', offset: false
+                },
+                y: {
+                    position: 'right',
+                    grid: { color: gridColor, drawBorder: false },
+                    ticks: { color: textColor, font: { size: 11, family: 'IBM Plex Mono' }, callback: v => '
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});
+ + v }
+                }
+            }
+        }
+    });
+    
+    addChartAnnotations();
+}
+
+function addChartAnnotations() {
+    if (!priceChart || !currentLevelsData) return;
+    
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const sColor = isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(22, 163, 74, 0.4)';
+    const rColor = isDark ? 'rgba(239, 68, 68, 0.4)' : 'rgba(220, 38, 38, 0.4)';
+
+    const annotations = {};
+
+    const customLines = (typeof getCustomWatchLines === 'function') ? getCustomWatchLines() : [];
+    customLines.forEach((p, i) => {
+        annotations['customLine'+i] = {
+            type: 'line', yMin: p, yMax: p, borderColor: '#8b5cf6', borderWidth: 2, borderDash: [5, 5],
+            label: { display: true, content: '📌 ' + p, position: 'start', backgroundColor: 'transparent', color: '#8b5cf6', font: { size: 10, family: 'IBM Plex Mono', weight: '600' }, yAdjust: -10 }
+        };
+    });
+
+    const supports = currentLevelsData.supports || [];
+    const resists = currentLevelsData.resists || [];
+    
+    supports.forEach((s, i) => {
+        annotations['s'+i] = {
+            type: 'line', yMin: s.price, yMax: s.price,
+            borderColor: sColor, borderWidth: 1.5, borderDash: [4, 4],
+            label: { display: true, content: 'S'+(i+1)+' 
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});
++s.price.toFixed(2), position: 'end', yAdjust: -10, backgroundColor: 'transparent', color: sColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+        };
+    });
+    
+    [...resists].reverse().forEach((r, i) => {
+        annotations['r'+i] = {
+            type: 'line', yMin: r.price, yMax: r.price,
+            borderColor: rColor, borderWidth: 1.5, borderDash: [4, 4],
+            label: { display: true, content: 'R'+(resists.length-i)+' 
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});
++r.price.toFixed(2), position: 'end', yAdjust: -10, backgroundColor: 'transparent', color: rColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+        };
+    });
+    
+    priceChart.options.plugins.annotation = { annotations };
+    priceChart.update();
+}
+
+// --- Market Movers ---
+async function fetchMarketMovers(scrId) {
+    elStockList.innerHTML = `<div class="loader-container"><div class="spinner"></div><p>กำลังดึงข้อมูล Market Movers...</p></div>`;
+    elStatsBar.innerHTML = '';
+    
+    // Use cache if fresh (< 5 min)
+    if (moverCache[scrId] && Date.now() - moverCache[scrId].ts < 300000) {
+        renderMoverList(moverCache[scrId].data);
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_URL}?action=getMarketMovers&scrId=${scrId}`);
+        if (!res.ok) throw new Error('API Error: ' + res.status);
+        const data = await res.json();
+        
+        if (data.success) {
+            moverCache[scrId] = { data, ts: Date.now() };
+            renderMoverList(data);
+        } else {
+            showErrorList(data.error || 'ไม่สามารถดึงข้อมูลได้');
+        }
+    } catch(err) {
+        showErrorList('Network Error: ' + err.message);
+    }
+}
+
+function renderMoverList(data) {
+    const stocks = data.data || [];
+    const titleMap = { day_gainers: '🚀 Top Gainers', day_losers: '📉 Top Losers', most_actives: '🔥 Most Active', trending_now: '📈 Trending Now' };
+    
+    elStatsBar.innerHTML = `<span>${titleMap[data.scrId] || ''}</span> &middot; ${stocks.length} ตัว`;
+    
+    if (!stocks.length) {
+        elStockList.innerHTML = `<div class="loader-container"><p>ไม่พบข้อมูล</p></div>`;
+        return;
+    }
+    
+    elStockList.innerHTML = stocks.map(s => createMoverCard(s)).join('');
+}
+
+function createMoverCard(s) {
+    const priceStr = s.price != null ? '
+let lastCheckedPrices = {};
+let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
+const ALERT_APPROACH_PCT = 0.005;
+
+function requestAlertPermission() {
+    if (!('Notification' in window)) {
+        showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'info');
+        return;
+    }
+    
+    // ถ้าเคยอนุญาตในเบราว์เซอร์แล้ว ให้สลับสถานะ เปิด/ปิด (Toggle) ภายในแอป
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled;
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+        return;
+    }
+    
+    // ถ้ายังไม่เคยอนุญาต ให้เด้งขอ Permission
+    Notification.requestPermission().then(perm => {
+        notificationsEnabled = perm === 'granted';
+        safeSet('SP_NOTIF_ENABLED', notificationsEnabled ? '1' : '0');
+        updateAlertButtonUI();
+    });
+}
+
+function updateAlertButtonUI() {
+    const btn = document.getElementById('alert-toggle-btn');
+    if (!btn) return;
+    const granted = ('Notification' in window) && Notification.permission === 'granted' && notificationsEnabled;
+    btn.classList.toggle('active', granted);
+    btn.innerHTML = granted ? '<i class="ri-notification-3-fill"></i>' : '<i class="ri-notification-3-line"></i>';
+}
+
+function checkPriceAlerts() {
+    if (!notificationsEnabled) return;
+    const symbolsToWatch = new Set([...favorites, ...watchlist]);
+    if (currentSymbol) symbolsToWatch.add(currentSymbol);
+
+    symbolsToWatch.forEach(sym => {
+        const stock = allStocks.find(s => s.symbol === sym);
+        if (!stock || stock.price == null) return;
+        const price = stock.price;
+        const prevPrice = lastCheckedPrices[sym];
+
+        const levels = [];
+        if (stock.s1 != null) levels.push({ key: 's1', price: stock.s1, label: 'แนวรับ S1' });
+        if (stock.r1 != null) levels.push({ key: 'r1', price: stock.r1, label: 'แนวต้าน R1' });
+        (globalWatchLines[sym] || []).forEach(p => {
+            levels.push({ key: 'pin_' + p, price: p, label: 'เส้นที่ปักหมุดไว้' });
+        });
+
+        levels.forEach(lv => {
+            const distPct = Math.abs(price - lv.price) / price;
+            if (prevPrice != null) {
+                const crossedUp = prevPrice < lv.price && price >= lv.price;
+                const crossedDown = prevPrice > lv.price && price <= lv.price;
+                if (crossedUp || crossedDown) {
+                    const dir = crossedUp ? 'ทะลุขึ้นเหนือ' : 'ทะลุลงต่ำกว่า';
+                    fireAlert(sym, sym + ' ' + dir + ' ' + lv.label + ' ที่ $' + lv.price.toFixed(2) + ' (ปัจจุบัน $' + price.toFixed(2) + ')', 'cross');
+                    return;
+                }
+            }
+            const stateKey = 'alertArmed_' + sym + '_' + lv.key;
+            const isArmed = safeGet(stateKey, '0') === '1';
+            if (distPct <= ALERT_APPROACH_PCT) {
+                if (!isArmed) {
+                    fireAlert(sym, sym + ' ใกล้ถึง ' + lv.label + ' แล้ว ($' + lv.price.toFixed(2) + ', ห่าง ' + (distPct * 100).toFixed(2) + '%)', 'approach');
+                    safeSet(stateKey, '1');
+                }
+            } else if (distPct > ALERT_APPROACH_PCT * 3) {
+                safeSet(stateKey, '0');
+            }
+        });
+        lastCheckedPrices[sym] = price;
+    });
+}
+
+async function fireAlert(symbol, message, type) {
+    showToast(message, type);
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification('AlphaZone Alert', { body: message, icon: '/icon.png', tag: symbol + '_' + type });
+            } else {
+                new Notification('AlphaZone Alert', { body: message, icon: '/icon.png' });
+            }
+        } catch (e) { console.warn('Notification failed', e); }
+    }
+    playAlertSound();
+}
+
+function showToast(message, type) {
+    let box = document.getElementById('alert-toast-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'alert-toast-box';
+        box.style.cssText = 'position:fixed; top:70px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:320px;';
+        document.body.appendChild(box);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'glass';
+    const borderColor = type === 'cross' ? 'var(--blue)' : type === 'approach' ? 'var(--yellow, #f59e0b)' : 'var(--text-main)';
+    toast.style.cssText = 'padding:12px 16px; border-radius:12px; font-size:13px; border-left:4px solid ' + borderColor + '; animation: fadeIn 0.3s ease;';
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(() => toast.remove(), 8000);
+}
+
+let _alertAudioCtx = null;
+function playAlertSound() {
+    try {
+        if (!_alertAudioCtx) _alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = _alertAudioCtx.createOscillator();
+        const gain = _alertAudioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, _alertAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _alertAudioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(_alertAudioCtx.destination);
+        osc.start(); osc.stop(_alertAudioCtx.currentTime + 0.3);
+    } catch (e) { /* user gesture required */ }
+}
+
+// ================== POLLING LOOP ==================
+let _alertPollTimer = null;
+function startAlertPolling() {
+    stopAlertPolling();
+    const tick = async () => {
+        try {
+            await fetchAsyncQuotes();
+            checkPriceAlerts();
+        } catch (e) { console.error('Alert poll error:', e); }
+        const interval = document.hidden ? 120000 : 30000;
+        _alertPollTimer = setTimeout(tick, interval);
+    };
+    _alertPollTimer = setTimeout(tick, 15000);
+}
+function stopAlertPolling() {
+    if (_alertPollTimer) { clearTimeout(_alertPollTimer); _alertPollTimer = null; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateAlertButtonUI();
+    startAlertPolling();
+});
+ + s.price.toFixed(2) : '—';
+    const chg = s.change, chgPct = s.changePct;
+    const isUp = chg != null && chg >= 0;
+    const chgStr = chg != null ? (isUp ? '+' : '') + chg.toFixed(2) : '—';
+    const pctStr = chgPct != null ? (isUp ? '+' : '') + chgPct.toFixed(2) + '%' : '—';
+    const colorClass = isUp ? 'ok' : 'near';
+    
+    const volStr = s.volume != null ? formatVolume(s.volume) : '—';
+    const logoUrl = `https://financialmodelingprep.com/image-stock/${s.symbol}.png`;
+    const initials = s.symbol.substring(0, 3);
+    
+    return `
+    <div class="stock-card" data-symbol="${escapeHtml(s.symbol)}">
+        <div class="sc-logo-wrapper">
+            <img class="sc-logo" src="${logoUrl}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="sc-logo-fallback" style="display:none">${escapeHtml(initials)}</div>
+        </div>
+        
+        <div class="sc-info">
+            <div class="sc-top">
+                <div style="display:flex; align-items:baseline; gap:6px;">
+                    <span class="sc-symbol">${escapeHtml(s.symbol)}</span>
+                    ${(s.extPrice != null && s.extChangePct != null) ? `<span class="sc-ext-price ${Number(s.extChangePct) >= 0 ? 'ext-green' : 'ext-red'}">${s.extType === 'PRE' ? '☀️' : '🌙'} ${Number(s.extPrice).toFixed(2)} (${Number(s.extChangePct) > 0 ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)</span>` : ''}
+                </div>
+                <span class="sc-price mono">${priceStr}</span>
+            </div>
+            <div class="sc-mid">
+                <span class="sc-name">${escapeHtml(s.name || '')}</span>
+                <span class="sc-pct ${colorClass} mono">${pctStr}</span>
+            </div>
+            <div class="sc-bot">
+                <span class="badge idx-sp">${s.exchange || 'US'}</span>
+                <span class="chip ${isUp ? 'r' : 's'}">${chgStr}</span>
+                <span class="badge" style="background:var(--border);color:var(--text-muted)">Vol ${volStr}</span>
+            </div>
+        </div>
+    </div>`;
+}
+
+function formatVolume(vol) {
+    if (vol >= 1e9) return (vol / 1e9).toFixed(1) + 'B';
+    if (vol >= 1e6) return (vol / 1e6).toFixed(1) + 'M';
+    if (vol >= 1e3) return (vol / 1e3).toFixed(0) + 'K';
+    return vol.toString();
+}
+
+
+
+
+
+// Visitor Count (GPF1 logic)
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('https://api.counterapi.dev/v1/alphazone_dashboard/visits/up')
+        .then(res => res.json())
+        .then(data => {
+            let count = data.count || 1;
+            let v = Math.floor(count / 10000) + 1;
+            let rem = (count % 10000).toString().padStart(4, '0');
+            const el = document.getElementById('global-visit-count');
+            if (el) el.textContent = `v${v}.${rem}`;
+        })
+        .catch(err => {
+            const el = document.getElementById('global-visit-count');
+            if (el) el.textContent = `v1.0001`;
+        });
+});
+
+// --- Layout Toggles ---
+function toggleLeftPanel() {
+    const leftPanel = document.getElementById('list-panel');
+    const icon = document.getElementById('panel-toggle-icon');
+    
+    if (!leftPanel || !icon) return;
+    
+    leftPanel.classList.toggle('collapsed');
+    
+    if (leftPanel.classList.contains('collapsed')) {
+        icon.className = 'ri-arrow-right-s-line';
+    } else {
+        icon.className = 'ri-arrow-left-s-line';
+    }
+}
+
+
+let _syncTimer = null;
+function syncFavWatchToBackend() {
+    clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(() => {
+        let watchLinesPayload = encodeURIComponent(JSON.stringify(globalWatchLines || {}));
+        fetch(`${API_URL}?action=syncFavWatch&favs=${favorites.map(encodeURIComponent).join(',')}&watch=${watchlist.map(encodeURIComponent).join(',')}&watchLines=${watchLinesPayload}`)
+            .then(res => { if (!res.ok) throw new Error('Sync API Error: ' + res.status); return res.json(); })
+            .catch(e => console.log('Sync failed', e));
+    }, 1000);
+}
+
+// Global Event Delegation for Stock List
+elStockList.addEventListener('click', (e) => {
+    const card = e.target.closest('.stock-card');
+    if (!card) return;
+    const symbol = card.dataset.symbol;
+    if (!symbol) return;
+    
+    if (e.target.closest('.sc-watch')) {
+        e.stopPropagation();
+        toggleWatchlist(symbol);
+        if (!currentMover) renderList(); // Re-render if in normal list to update sort/filter
+        return;
+    }
+    if (e.target.closest('.sc-star')) {
+        e.stopPropagation();
+        toggleFavorite(symbol);
+        if (!currentMover) renderList(); // Re-render if in normal list to update sort/filter
+        return;
+    }
+    
+    document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    openDetail(symbol);
+});
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('ServiceWorker registration successful');
+    }).catch(err => {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  });
+}
+
+
 // ================== PRICE ALERT SYSTEM ==================
 let lastCheckedPrices = {};
 let notificationsEnabled = safeGet('SP_NOTIF_ENABLED', '0') === '1';
