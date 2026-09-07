@@ -1503,7 +1503,7 @@ function renderCustomWatchLinesUI() {
     let container = document.getElementById('custom-watchlines-container');
     if (!container) {
         // If not exists, create it and append it after the price chart container
-        const chartWrapper = document.getElementById('price-chart-container');
+        const chartWrapper = document.querySelector('.canvas-container');
         if (chartWrapper) {
             container = document.createElement('div');
             container.id = 'custom-watchlines-container';
