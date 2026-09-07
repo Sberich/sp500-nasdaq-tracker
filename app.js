@@ -1499,60 +1499,55 @@ function removeCustomWatchLine(p) {
 }
 
 function renderCustomWatchLinesUI() {
-    // Try to find the container below the chart
-    let container = document.getElementById('custom-watchlines-container');
-    if (!container) {
-        // If not exists, create it and append it after the price chart container
-        const chartWrapper = document.querySelector('.canvas-container');
-        if (chartWrapper) {
-            container = document.createElement('div');
-            container.id = 'custom-watchlines-container';
-            container.style.cssText = 'padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--bg-dark); border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;';
-            chartWrapper.parentNode.insertBefore(container, chartWrapper.nextSibling);
-        } else {
-            return;
-        }
+    let container = document.querySelector('.canvas-container');
+    if (!container) return;
+    
+    let wlBox = document.getElementById('custom-watchlines-box');
+    if (!wlBox) {
+        wlBox = document.createElement('div');
+        wlBox.id = 'custom-watchlines-box';
+        wlBox.style.cssText = 'padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; background: transparent; margin-top: -10px;';
+        container.appendChild(wlBox);
     }
 
     const lines = getCustomWatchLines();
-    container.innerHTML = '';
+    wlBox.innerHTML = '';
     
     if (lines.length === 0) {
-        container.style.display = 'none';
+        wlBox.style.display = 'none';
         return;
     }
     
-    container.style.display = 'flex';
+    wlBox.style.display = 'flex';
     
     lines.forEach(p => {
         const pill = document.createElement('div');
         pill.className = 'wl-pill';
-        pill.style.cssText = 'background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid #8b5cf6; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;';
+        // ทำให้ปุ่มเล็กลง ฟอนต์เล็กลง ขอบบางลง ดูมินิมอลขึ้น
+        pill.style.cssText = 'background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.2s;';
         
-        pill.innerHTML = `<span style="font-weight: bold; color: #8b5cf6;">x</span> $${p.toFixed(2)}`;
+        pill.innerHTML = `<span style="color: #8b5cf6; font-size: 0.8rem;">✕</span> ${p.toFixed(2)}`;
         pill.onclick = () => removeCustomWatchLine(p);
         
-        // Hover effect
-        pill.onmouseover = () => pill.style.background = 'rgba(139, 92, 246, 0.4)';
-        pill.onmouseout = () => pill.style.background = 'rgba(139, 92, 246, 0.2)';
+        pill.onmouseover = () => pill.style.background = 'rgba(139, 92, 246, 0.3)';
+        pill.onmouseout = () => pill.style.background = 'rgba(139, 92, 246, 0.15)';
         
-        container.appendChild(pill);
+        wlBox.appendChild(pill);
     });
     
-    // Add Reset button
-    const btnReset = document.createElement('div');
-    btnReset.style.cssText = 'margin-left: auto; background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 4px;';
-    btnReset.innerHTML = '🔄 Reset';
-    btnReset.onclick = () => {
-        if(confirm('ต้องการลบปักหมุดทั้งหมดของ ' + currentSymbol + ' ใช่หรือไม่?')) {
-            saveCustomWatchLines([]);
-            if(typeof addChartAnnotations === 'function') addChartAnnotations();
-        }
-    };
-    btnReset.onmouseover = () => btnReset.style.background = 'rgba(255, 255, 255, 0.2)';
-    btnReset.onmouseout = () => btnReset.style.background = 'rgba(255, 255, 255, 0.1)';
-    
-    container.appendChild(btnReset);
+    // เปลี่ยนปุ่ม Reset เป็นข้อความเล็กๆ ไม่แย่งซีนปุ่ม Reset Zoom
+    if (lines.length > 1) {
+        const btnClearAll = document.createElement('div');
+        btnClearAll.style.cssText = 'margin-left: auto; color: #ef4444; font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 2px 6px; opacity: 0.8;';
+        btnClearAll.innerHTML = 'ล้างทั้งหมด';
+        btnClearAll.onclick = () => {
+            if(confirm('ต้องการลบปักหมุดทั้งหมดของ ' + currentSymbol + ' ใช่หรือไม่?')) {
+                saveCustomWatchLines([]);
+                if(typeof addChartAnnotations === 'function') addChartAnnotations();
+            }
+        };
+        wlBox.appendChild(btnClearAll);
+    }
 }
 
 // Hook into openDetail to render the UI when switching stocks

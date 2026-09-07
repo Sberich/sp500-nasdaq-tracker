@@ -791,7 +791,7 @@ input {
 }
 .hfb-price {
     font-size: 22px;
-    font-family: var(--font-mono);
+    font-family: var(--pm-mono);
     color: #fff;
     font-weight: 700;
 }
@@ -822,7 +822,7 @@ input {
     font-size: 13px;
     color: #f8fafc;
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--pm-mono);
 }
 /* Premium Classes */
 .pm-divider { width: 1px; background: var(--pm-border); flex-shrink: 0; }

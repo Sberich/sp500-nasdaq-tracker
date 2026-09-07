@@ -1,9 +1,9 @@
-const CACHE_NAME = 'sp-screener-v13';
+const CACHE_NAME = 'sp-screener-v14';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/style.css?v=13',
-  '/app.js?v=13',
+  '/style.css?v=14',
+  '/app.js?v=14',
   'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js',
