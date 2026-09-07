@@ -1524,9 +1524,9 @@ function renderCustomWatchLinesUI() {
         const pill = document.createElement('div');
         pill.className = 'wl-pill';
         // ทำให้ปุ่มเล็กลง ฟอนต์เล็กลง ขอบบางลง ดูมินิมอลขึ้น
-        pill.style.cssText = 'background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.2s;';
+        pill.style.cssText = 'background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); padding: 1px 4px; margin: 0; border-radius: 3px; font-size: 0.65rem; display: flex; align-items: center; gap: 2px; cursor: pointer; transition: 0.2s; line-height: 1;';
         
-        pill.innerHTML = `<span style="color: #8b5cf6; font-size: 0.8rem;">✕</span> ${p.toFixed(2)}`;
+        pill.innerHTML = `<span style="color: #8b5cf6; font-size: 0.65rem;">✕</span> ${p.toFixed(2)}`;
         pill.onclick = () => removeCustomWatchLine(p);
         
         pill.onmouseover = () => pill.style.background = 'rgba(139, 92, 246, 0.3)';
@@ -1609,3 +1609,27 @@ document.addEventListener('keydown', function(e) {
 });
 // =============================================================
 
+
+
+// ==========================================
+// Async Quotes Polling (Pre/Post Market & Market Cap)
+// ==========================================
+let quotePollTimer = null;
+function startQuotePolling() {
+    if (quotePollTimer) clearInterval(quotePollTimer);
+    
+    // Call once immediately after a short delay to load pre/post market prices
+    setTimeout(() => {
+        if (allStocks && allStocks.length > 0) {
+            fetchAsyncQuotes();
+        }
+    }, 2000);
+    
+    quotePollTimer = setInterval(() => {
+        // Only fetch if tab is active to save quota
+        if (document.visibilityState === 'visible' && allStocks && allStocks.length > 0) {
+            fetchAsyncQuotes();
+        }
+    }, 45000); // 45 seconds
+}
+document.addEventListener('DOMContentLoaded', startQuotePolling);
