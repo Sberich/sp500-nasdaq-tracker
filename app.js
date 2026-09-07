@@ -346,9 +346,33 @@ function updateStockPricesInPlace() {
     allStocks.forEach(s => {
         const card = list.querySelector('.stock-card[data-symbol="' + CSS.escape(s.symbol) + '"]');
         if (!card) return;
+        
+        // 1. Update regular price
         const priceEl = card.querySelector('.sc-price');
-        if (priceEl && s.price != null) priceEl.textContent = String.fromCharCode(36) + s.price.toFixed(2);
+        if (priceEl && s.price != null) priceEl.textContent = '$' + s.price.toFixed(2);
+        
+        // 2. Update Pre/Post market price
+        if (s.extPrice != null && s.extChangePct != null) {
+            let extEl = card.querySelector('.sc-ext-price');
+            const isUp = Number(s.extChangePct) >= 0;
+            const typeStr = s.extType === 'PRE' ? 'Pre' : 'Post';
+            const valStr = `${typeStr} ${Number(s.extPrice).toFixed(2)} (${isUp ? '+' : ''}${Number(s.extChangePct).toFixed(2)}%)`;
+            
+            if (extEl) {
+                extEl.className = `sc-ext-price ${isUp ? 'ext-green' : 'ext-red'}`;
+                extEl.textContent = valStr;
+            } else {
+                const nameContainer = card.querySelector('.sc-top > div');
+                if (nameContainer) {
+                    extEl = document.createElement('span');
+                    extEl.className = `sc-ext-price ${isUp ? 'ext-green' : 'ext-red'}`;
+                    extEl.textContent = valStr;
+                    nameContainer.appendChild(extEl);
+                }
+            }
+        }
     });
+});
 }
 
 function showErrorList(msg) {
