@@ -1391,7 +1391,7 @@ async function updateFearGreedBadge() {
                 rating: data.rating,
                 vix: raw.market_volatility_vix ? Math.round(raw.market_volatility_vix.score) : null
             };
-            fetch(API_URL + '?action=syncFearGreed&payload=' + encodeURIComponent(JSON.stringify(payload)), { mode: 'no-cors' }).catch(() => {});
+            fetch(API_URL + '?action=syncFearGreed&payload=' + encodeURIComponent(JSON.stringify(payload))).catch(e => console.log('FG sync error:', e));
         }
         
     } catch (err) {
@@ -4142,3 +4142,15 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAlertButtonUI();
     startAlertPolling();
 });
+
+function addCustomWatchLineByPrice(p) {
+    if (!currentSymbol) return;
+    let lines = getCustomWatchLines();
+    p = Number(p.toFixed(2));
+    if (!lines.includes(p)) {
+        lines.push(p);
+        lines.sort((a,b) => b - a);
+        saveCustomWatchLines(lines);
+        if(typeof addChartAnnotations === 'function') addChartAnnotations();
+    }
+}
