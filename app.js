@@ -372,7 +372,6 @@ function updateStockPricesInPlace() {
             }
         }
     });
-});
 }
 
 function showErrorList(msg) {
