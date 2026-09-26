@@ -179,14 +179,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     contents: geminiContents
                 };
 
-                const geminiPath = `v1beta/models/gemini-3.8-flash:generateContent?key=${openaiApiKey}`;
+                const geminiPath = `v1beta/models/gemini-1.5-flash:generateContent`;
                 const apiUrl = vercelTeamId 
                     ? `https://gateway.ai.vercel.com/v1/${vercelTeamId}/google-gemini/${geminiPath}`
                     : `https://generativelanguage.googleapis.com/${geminiPath}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': openaiApiKey
+                    },
                     body: JSON.stringify(geminiPayload)
                 });
 
