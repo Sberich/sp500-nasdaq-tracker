@@ -2,9 +2,13 @@ import discord
 import requests
 import json
 import re
+import os
+from dotenv import load_dotenv
 
-DISCORD_TOKEN = 'MTU1MzQwMTMwNTQ0NjIyODA0OA.GB3HQu.EgOV9nvo8CIZLIZwn8ZEVF4HLvryLVwF3EQkns'
-GEMINI_API_KEY = 'AQ.Ab8RN6IWXkor78WtMx_jW1-Xa4LwqNlxmAgWy8AbqJFArmaO0w'
+load_dotenv()
+
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec'
 
 class AlphaZoneBot(discord.Client):
@@ -49,7 +53,7 @@ class AlphaZoneBot(discord.Client):
                 except Exception as e:
                     pass
             else:
-                await message.channel.send("⏳ กำลังคิดคำตอบ...")
+                await message.channel.send("⏳ กำลังประมวลผลคำตอบ...")
 
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
             
@@ -63,7 +67,7 @@ class AlphaZoneBot(discord.Client):
             Instructions for formatting:
             1. Answer in THAI language clearly and professionally.
             2. Format the output COMPACTLY. Do NOT use excessive blank lines.
-            3. Do NOT use horizontal rules (---).
+            3. Do NOT use markdown horizontal rules.
             4. Keep paragraphs and bullet points close together.
             '''
 
@@ -84,4 +88,7 @@ class AlphaZoneBot(discord.Client):
 intents = discord.Intents.default()
 intents.message_content = True
 client = AlphaZoneBot(intents=intents)
-client.run(DISCORD_TOKEN)
+if not DISCORD_TOKEN:
+    print("No Discord Token found in .env")
+else:
+    client.run(DISCORD_TOKEN)
