@@ -410,7 +410,52 @@
         </div>
     </div>
 
+    <!-- Chatbot UI -->
+    <div id="ai-chat-container" class="ai-chat-hidden">
+        <div class="ai-chat-header glass">
+            <div class="ai-chat-title">
+                <i class="ri-robot-2-line"></i> AlphaZone AI
+            </div>
+            <div class="ai-chat-actions">
+                <button id="ai-settings-btn" class="icon-btn" title="ตั้งค่า API Key"><i class="ri-settings-3-line"></i></button>
+                <button id="ai-close-btn" class="icon-btn" title="ปิดแชท"><i class="ri-close-line"></i></button>
+            </div>
+        </div>
+        <div class="ai-chat-messages" id="ai-chat-messages">
+            <div class="chat-message ai-message">
+                <div class="message-bubble">สวัสดีครับ! ผมคือ AlphaZone AI ถามข้อมูลหุ้น, แนวรับ-แนวต้าน หรือให้อ่านกราฟเบื้องต้นได้เลยครับ (ต้องตั้งค่า API Key ก่อนนะ)</div>
+            </div>
+        </div>
+        <div class="ai-chat-input-area glass">
+            <textarea id="ai-chat-input" placeholder="พิมพ์ถามชื่อหุ้น เช่น 'วิเคราะห์ AAPL ให้หน่อย'..." rows="1"></textarea>
+            <button id="ai-send-btn" class="icon-btn primary"><i class="ri-send-plane-fill"></i></button>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div class="modal-overlay" id="ai-config-modal">
+        <div class="modal glass">
+            <h2><i class="ri-key-2-line"></i> ตั้งค่า AI & Gateway</h2>
+            <p style="margin-bottom: 4px; text-align: left; font-size: 13px;">1. OpenAI API Key (จำเป็น)</p>
+            <input type="password" id="ai-api-key-input" class="full-input" placeholder="sk-..." style="margin-bottom: 12px;">
+            
+            <p style="margin-bottom: 4px; text-align: left; font-size: 13px;">2. Vercel Team ID (เพื่อใช้ AI Gateway)</p>
+            <input type="text" id="vercel-team-id-input" class="full-input" placeholder="team_... หรือชื่อ ID ของคุณ" style="margin-bottom: 16px;">
+            
+            <div class="modal-actions">
+                <button class="btn" id="btn-cancel-ai-api" style="background: var(--card-bg);">ยกเลิก</button>
+                <button class="btn primary" id="btn-save-ai-api">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Floating Button -->
+    <button id="ai-chat-fab" class="glass" title="คุยกับ AI">
+        <i class="ri-robot-2-line"></i>
+    </button>
+
     <script src="app.js?v=14"></script>
+    <script src="ai-chat.js"></script>
 <style>
 /* Premium About Modal */
 .about-overlay {
