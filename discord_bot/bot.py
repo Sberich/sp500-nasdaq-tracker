@@ -1,0 +1,87 @@
+import discord
+import requests
+import json
+import re
+
+DISCORD_TOKEN = 'MTU1MzQwMTMwNTQ0NjIyODA0OA.GB3HQu.EgOV9nvo8CIZLIZwn8ZEVF4HLvryLVwF3EQkns'
+GEMINI_API_KEY = 'AQ.Ab8RN6IWXkor78WtMx_jW1-Xa4LwqNlxmAgWy8AbqJFArmaO0w'
+GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec'
+
+class AlphaZoneBot(discord.Client):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def on_ready(self):
+        print(f'Logged in as {self.user}')
+
+    async def on_message(self, message):
+        if message.author == self.user:
+            return
+
+        if self.user.mentioned_in(message):
+            clean_content = message.clean_content.replace(f'@{self.user.name}', '').strip()
+            match = re.search(r'\b[A-Z]{1,5}\b', clean_content)
+            symbol = match.group(0) if match else None
+
+            system_context = ""
+            if symbol:
+                await message.channel.send(f"⏳ กำลังดึงข้อมูล **{symbol}** จากหน้าจอ AlphaZone และวิเคราะห์...")
+                try:
+                    res = requests.get(f"{GAS_API_URL}?action=getLiveLevels&symbol={symbol}")
+                    if res.status_code == 200:
+                        data = res.json()
+                        if 'data' in data and data['data']:
+                            stock_data = data['data']
+                            system_context = f'''
+                            ข้อมูลหุ้น: {symbol}
+                            ราคาปัจจุบัน: {stock_data.get('Current Price', 'N/A')}
+                            แนวโน้ม (Trend): {stock_data.get('Trend', 'N/A')}
+                            
+                            -- โซนแนวรับแนวต้าน (Support/Resistance) --
+                            R3 (แนวต้าน 3): {stock_data.get('R3', 'N/A')}
+                            R2 (แนวต้าน 2): {stock_data.get('R2', 'N/A')}
+                            R1 (แนวต้าน 1): {stock_data.get('R1', 'N/A')}
+                            Pivot Point (จุดหมุน): {stock_data.get('Pivot', 'N/A')}
+                            S1 (แนวรับ 1): {stock_data.get('S1', 'N/A')}
+                            S2 (แนวรับ 2): {stock_data.get('S2', 'N/A')}
+                            S3 (แนวรับ 3): {stock_data.get('S3', 'N/A')}
+                            '''
+                except Exception as e:
+                    pass
+            else:
+                await message.channel.send("⏳ กำลังคิดคำตอบ...")
+
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
+            
+            prompt = f'''
+            You are AlphaZone AI. 
+            User asks: {clean_content}
+            
+            Here is the live data from AlphaZone algorithm (if any):
+            {system_context}
+            
+            Instructions for formatting:
+            1. Answer in THAI language clearly and professionally.
+            2. Format the output COMPACTLY. Do NOT use excessive blank lines.
+            3. Do NOT use horizontal rules (---).
+            4. Keep paragraphs and bullet points close together.
+            '''
+
+            payload = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+            headers = {'Content-Type': 'application/json'}
+            try:
+                ai_res = requests.post(gemini_url, headers=headers, json=payload)
+                if ai_res.status_code == 200:
+                    reply_text = ai_res.json()['candidates'][0]['content']['parts'][0]['text']
+                    if len(reply_text) > 2000:
+                        for chunk in [reply_text[i:i+2000] for i in range(0, len(reply_text), 2000)]:
+                            await message.channel.send(chunk)
+                    else:
+                        await message.channel.send(reply_text)
+            except Exception as e:
+                pass
+
+intents = discord.Intents.default()
+intents.message_content = True
+client = AlphaZoneBot(intents=intents)
+client.run(DISCORD_TOKEN)
