@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.classList.toggle('ai-chat-hidden');
         if (!chatContainer.classList.contains('ai-chat-hidden')) {
             chatInput.focus();
+            chatFab.style.display = 'none';
+        } else {
+            chatFab.style.display = 'flex';
         }
     }
 
