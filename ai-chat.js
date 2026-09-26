@@ -51,10 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (key) {
             safeSet('OPENAI_API_KEY', key);
-            openaiApiKey = key;
+            openaiApiKey = key.trim();
             
             safeSet('VERCEL_TEAM_ID', teamId);
-            vercelTeamId = teamId;
+            vercelTeamId = teamId.trim();
             
             configModal.classList.remove('active');
             appendMessage('ai', 'บันทึกการตั้งค่าเรียบร้อยแล้วครับ! พร้อมใช้งานแล้ว 🚀');
