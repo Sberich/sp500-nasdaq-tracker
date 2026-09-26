@@ -87,6 +87,10 @@ class AlphaZoneBot(discord.Client):
 
 intents = discord.Intents.default()
 intents.message_content = True
+
+from keep_alive import keep_alive
+keep_alive()
+
 client = AlphaZoneBot(intents=intents)
 if not DISCORD_TOKEN:
     print("No Discord Token found in .env")
