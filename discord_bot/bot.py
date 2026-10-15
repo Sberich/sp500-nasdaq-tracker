@@ -55,28 +55,45 @@ class AlphaZoneBot(discord.Client):
             else:
                 await message.channel.send("⏳ กำลังประมวลผลคำตอบ...")
 
-            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
-            
+            coach_instruction = '''คุณคือ "AlphaZone AI Investment Coach" โค้ชและที่ปรึกษาการลงทุนหุ้นสหรัฐอเมริกา (S&P 500 & NASDAQ 100) ประจำแพลตฟอร์ม AlphaZone
+กฎเหล็กที่ต้องปฏิบัติ:
+1. ฐานข้อมูล AlphaZone ทั้งหมดคือหุ้นในตลาดสหรัฐอเมริกา (US Market) เท่านั้น ไม่ใช่ตลาดหุ้นไทย (SET/mai) และไม่ใช่เหรียญคริปโตเคอร์เรนซี (เช่น CRWV คือหุ้น CoreWeave ในตลาด NASDAQ ไม่ใช่เหรียญคริปโต CRV Curve)
+2. หากมีข้อมูลหุ้นแนบมาให้ แสดงว่าจดทะเบียนซื้อขายในตลาดสหรัฐฯ เรียบร้อยแล้ว ห้ามบอกว่ายังไม่เข้าตลาด หรือรอ IPO/S-1 เด็ดขาด
+3. ตอบเป็นภาษาไทยอย่างมืออาชีพ กระชับ ชัดเจน มีวินัยในการลงทุน ไม่เว้นบรรทัดพร่ำเพรื่อ ไม่ใช้เส้นคั่น Markdown
+4. เมื่อผู้ใช้ถามถึงหุ้นตัวใด ให้วิเคราะห์อย่างเป็นระบบตามกรอบ "P-A-R-T Framework":
+   - P (Position & Trend): ประเมินทิศทางและโครงสร้างราคาปัจจุบันจากข้อมูลของระบบ (เช่น strong_up = ขาขึ้นแข็งแกร่ง, strong_down = ขาลง)
+   - A (Action Plan): วางแผนจุดเข้า โซนแนวรับ (S1, S2) สำหรับทยอยสะสม และเป้าหมายทำกำไรที่แนวต้าน (R1, R2)
+   - R (Risk Management): จุดตัดขาดทุน (Stop Loss) ที่แนะนำ และประเมินความคุ้มค่า (Risk:Reward) หากสถานะเป็น strong_down ให้เตือนอย่าเพิ่งรีบรับมีด
+   - T (Trigger & News): ปัจจัยพื้นฐาน สรุปสภาวะอุตสาหกรรม หรือเหตุการณ์สำคัญที่ขับเคลื่อนราคา
+5. อ้างอิงตัวเลขราคา แนวรับ-แนวต้าน จากข้อมูลระบบ AlphaZone ที่แนบมาให้เสมอ'''
+
             prompt = f'''
-            You are AlphaZone AI. 
-            User asks: {clean_content}
+            คำถามจากผู้ใช้: {clean_content}
             
-            Here is the live data from AlphaZone algorithm (if any):
-            {system_context}
-            
-            Instructions for formatting:
-            1. Answer in THAI language clearly and professionally.
-            2. Format the output COMPACTLY. Do NOT use excessive blank lines.
-            3. Do NOT use markdown horizontal rules.
-            4. Keep paragraphs and bullet points close together.
+            ข้อมูลระบบ AlphaZone:
+            {system_context if system_context else "ผู้ใช้ไม่ได้ระบุชื่อหุ้น หรือเป็นการสนทนาทั่วไป"}
             '''
 
-            payload = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
-            headers = {'Content-Type': 'application/json'}
+            clean_gemini_key = (GEMINI_API_KEY or '').strip()
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={clean_gemini_key}"
+            payload = {
+                "systemInstruction": {
+                    "parts": [{"text": coach_instruction}]
+                },
+                "contents": [{"role": "user", "parts": [{"text": prompt}]}]
+            }
+            headers = {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': clean_gemini_key
+            }
             try:
-                ai_res = requests.post(gemini_url, headers=headers, json=payload, timeout=10)
+                ai_res = requests.post(gemini_url, headers=headers, json=payload, timeout=12)
                 if ai_res.status_code == 200:
-                    reply_text = ai_res.json()['candidates'][0]['content']['parts'][0]['text']
+                    candidates = ai_res.json().get('candidates', [])
+                    if candidates and 'content' in candidates[0] and 'parts' in candidates[0]['content']:
+                        reply_text = "".join([p.get('text', '') for p in candidates[0]['content']['parts']])
+                    else:
+                        reply_text = "⚠️ ไม่พบคำตอบจาก AI"
                     if len(reply_text) > 2000:
                         for chunk in [reply_text[i:i+2000] for i in range(0, len(reply_text), 2000)]:
                             await message.channel.send(chunk)
