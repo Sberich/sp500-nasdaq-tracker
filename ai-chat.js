@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKeyInput = document.getElementById('ai-api-key-input');
     const teamIdInput = document.getElementById('vercel-team-id-input');
     const discordWebhookInput = document.getElementById('discord-webhook-input');
+    const finnhubApiKeyInput = document.getElementById('finnhub-api-key-input');
     const saveApiBtn = document.getElementById('btn-save-ai-api');
     const cancelApiBtn = document.getElementById('btn-cancel-ai-api');
 
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let openaiApiKey = safeGet('OPENAI_API_KEY', '');
     let vercelTeamId = safeGet('VERCEL_TEAM_ID', '');
     let discordWebhookUrl = safeGet('DISCORD_WEBHOOK_URL', '');
+    let finnhubApiKey = safeGet('FINNHUB_API_KEY', '');
     let isWaitingForResponse = false;
     let messageHistory = [
         { role: 'system', content: 'You are AlphaZone AI, an expert stock market assistant. You help users analyze S&P500 and NASDAQ100 stocks. You use the provided context to answer questions in Thai.' }
@@ -44,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         apiKeyInput.value = openaiApiKey;
         if(teamIdInput) teamIdInput.value = vercelTeamId;
         if(discordWebhookInput) discordWebhookInput.value = discordWebhookUrl;
+        if(finnhubApiKeyInput) finnhubApiKeyInput.value = finnhubApiKey;
         configModal.classList.add('active');
     });
 
@@ -55,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const key = apiKeyInput.value.trim();
         const teamId = teamIdInput ? teamIdInput.value.trim() : '';
         const webhook = discordWebhookInput ? discordWebhookInput.value.trim() : '';
+        const finnhubKey = finnhubApiKeyInput ? finnhubApiKeyInput.value.trim() : '';
         
         if (key) {
             safeSet('OPENAI_API_KEY', key);
@@ -65,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             safeSet('DISCORD_WEBHOOK_URL', webhook);
             discordWebhookUrl = webhook.trim();
+
+            safeSet('FINNHUB_API_KEY', finnhubKey);
+            finnhubApiKey = finnhubKey.trim();
             
             configModal.classList.remove('active');
             appendMessage('ai', 'บันทึกการตั้งค่าเรียบร้อยแล้วครับ! พร้อมใช้งานแล้ว 🚀');
@@ -247,8 +254,48 @@ document.addEventListener('DOMContentLoaded', () => {
         return msgDiv;
     }
 
+    // Fetch Company News from Finnhub safely (with 3.5s timeout & zero blocking)
+    async function fetchCompanyNews(symbol, apiKey) {
+        if (!symbol || !apiKey) return [];
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+            const toDate = new Date().toISOString().split('T')[0];
+            const fromDateObj = new Date();
+            fromDateObj.setDate(fromDateObj.getDate() - 7);
+            const fromDate = fromDateObj.toISOString().split('T')[0];
+
+            const url = `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(symbol)}&from=${fromDate}&to=${toDate}&token=${encodeURIComponent(apiKey)}`;
+            
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+                console.warn(`Finnhub news status: ${res.status}`);
+                return [];
+            }
+
+            const data = await res.json();
+            if (!Array.isArray(data)) return [];
+
+            return data
+                .filter(item => item && item.headline && item.headline.trim().length > 0)
+                .slice(0, 3)
+                .map(item => ({
+                    headline: item.headline.trim(),
+                    summary: (item.summary || '').trim().slice(0, 250),
+                    source: item.source || 'Financial Media',
+                    date: item.datetime ? new Date(item.datetime * 1000).toLocaleDateString('th-TH') : ''
+                }));
+        } catch (e) {
+            console.warn('Finnhub news fetch skipped:', e.message || e);
+            return [];
+        }
+    }
+
     // Context Gathering with Smart Symbol Extraction
-    function getSystemContext(userText = '') {
+    async function getSystemContext(userText = '') {
         let context = "=== ข้อมูลสดจากระบบ AlphaZone (US Stock S&P 500 / NASDAQ 100) ===\n";
         
         // 1. ตรวจจับชื่อหุ้นจากข้อความที่ผู้ใช้พิมพ์ (เช่น CRWV, NVDA, AAPL)
@@ -291,6 +338,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stock.pivot) context += `- จุดหมุนราคา (Pivot Point): $${stock.pivot}\n`;
                 if (stock.rsi) context += `- RSI(14): ${stock.rsi}\n`;
             });
+
+            // 3.1 แนบข่าวสดล่าสุดจาก Finnhub (ถ้ามี API Key)
+            if (finnhubApiKey) {
+                const primarySymbol = foundStocks[0].symbol;
+                try {
+                    const newsList = await fetchCompanyNews(primarySymbol, finnhubApiKey);
+                    if (newsList && newsList.length > 0) {
+                        context += `\n[ข่าวสดล่าสุดในรอบ 7 วันจากสำนักข่าวชั้นนำ (Reuters/CNBC/Bloomberg) สำหรับ ${primarySymbol}]\n`;
+                        newsList.forEach((n, idx) => {
+                            context += `${idx + 1}. [${n.source}] ${n.headline} (${n.date})\n`;
+                            if (n.summary) context += `   สรุป: ${n.summary}\n`;
+                        });
+                        context += `(คำแนะนำโค้ช: นำประเด็นข่าวข้างต้นไปร่วมวิเคราะห์ในข้อ T: Trigger & News เพื่อชี้ให้เห็นว่าข่าวส่งผลต่อจิตวิทยาตลาดและกรอบราคาอย่างไร)\n`;
+                    }
+                } catch (newsErr) {
+                    console.warn('Error appending news to context:', newsErr);
+                }
+            }
         }
 
         // 4. ข้อมูลภาพรวมตลาดสหรัฐฯ
@@ -322,8 +387,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.style.height = 'auto';
         isWaitingForResponse = true;
 
-        // 1. Gather Real-time System Context
-        const systemContext = getSystemContext(text);
+        const typingDiv = showTypingIndicator();
+
+        // 1. Gather Real-time System Context (async with live news)
+        const systemContext = await getSystemContext(text);
         
         // 2. Define Master Coach System Instruction (P-A-R-T Framework)
         const coachInstruction = `คุณคือ "AlphaZone AI Investment Coach" โค้ชและที่ปรึกษาการลงทุนหุ้นสหรัฐอเมริกา (S&P 500 & NASDAQ 100) ประจำแพลตฟอร์ม AlphaZone
@@ -335,13 +402,11 @@ document.addEventListener('DOMContentLoaded', () => {
    - P (Position & Trend): ประเมินทิศทางและโครงสร้างราคาปัจจุบันจากข้อมูลของระบบ (เช่น strong_up = ขาขึ้นแข็งแกร่ง, strong_down = ขาลง)
    - A (Action Plan): วางแผนจุดเข้า โซนแนวรับ (S1, S2) สำหรับทยอยสะสม และเป้าหมายทำกำไรที่แนวต้าน (R1, R2)
    - R (Risk Management): จุดตัดขาดทุน (Stop Loss) ที่แนะนำ และประเมินความคุ้มค่า (Risk:Reward) หากสถานะเป็น strong_down ให้เตือนอย่าเพิ่งรีบรับมีด
-   - T (Trigger & News): ปัจจัยพื้นฐาน สรุปสภาวะอุตสาหกรรม หรือเหตุการณ์สำคัญที่ขับเคลื่อนราคา
+   - T (Trigger & News): ปัจจัยขับเคลื่อนราคาและข่าวสาร หากมีข้อมูลข่าวสารสดแนบมา ให้เจาะลึกวิเคราะห์ว่าข่าวนี้ (Catalyst) มีผลต่อจิตวิทยาตลาดและทิศทางราคาอย่างไร หากไม่มีข่าว ให้สรุปแนวโน้มอุตสาหกรรมและปัจจัยขับเคลื่อนสำคัญ
 5. อ้างอิงตัวเลขราคา แนวรับ-แนวต้าน จากข้อมูลระบบ AlphaZone ที่แนบมาให้เสมอ
 6. จัดรูปแบบข้อความให้อ่านง่าย เว้นบรรทัดชัดเจน ไม่ใช้เส้นคั่น Markdown`;
 
         const fullSystemInstruction = `${coachInstruction}\n\n${systemContext}`;
-
-        const typingDiv = showTypingIndicator();
 
         try {
             let aiReply = "";
