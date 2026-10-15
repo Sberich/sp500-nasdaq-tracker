@@ -87,7 +87,7 @@ class AlphaZoneBot(discord.Client):
                 'x-goog-api-key': clean_gemini_key
             }
             try:
-                ai_res = requests.post(gemini_url, headers=headers, json=payload, timeout=12)
+                ai_res = requests.post(gemini_url, headers=headers, json=payload, timeout=60)
                 if ai_res.status_code == 200:
                     candidates = ai_res.json().get('candidates', [])
                     if candidates and 'content' in candidates[0] and 'parts' in candidates[0]['content']:
