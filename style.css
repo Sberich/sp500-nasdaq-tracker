@@ -1476,6 +1476,52 @@ input {
 .ai-chat-messages::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
 .ai-chat-messages::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
+/* AI Chat Message Actions (Copy & Discord Share) */
+.chat-message.ai-message {
+    flex-direction: column;
+}
+
+.message-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    align-self: flex-start;
+}
+
+.msg-action-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+}
+
+.msg-action-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.msg-action-btn.btn-discord:hover {
+    background: #5865F2;
+    border-color: #5865F2;
+    color: #ffffff;
+    box-shadow: 0 2px 10px rgba(88, 101, 242, 0.3);
+}
+
+.msg-action-btn.success {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #10b981;
+}
+
 @media (max-width: 480px) {
     #ai-chat-container {
         bottom: 0;
@@ -1489,5 +1535,15 @@ input {
     }
     #ai-chat-container.ai-chat-hidden {
         transform: translateY(100%);
+    }
+}
+/* Mobile Responsiveness for AI Chat */
+@media (max-width: 480px) {
+    .chat-toggle-btn {
+        bottom: 15px;
+        right: 15px;
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
     }
 }

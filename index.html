@@ -440,7 +440,10 @@
             <input type="password" id="ai-api-key-input" class="full-input" placeholder="sk-..." style="margin-bottom: 12px;">
             
             <p style="margin-bottom: 4px; text-align: left; font-size: 13px;">2. Vercel Team ID (เพื่อใช้ AI Gateway)</p>
-            <input type="text" id="vercel-team-id-input" class="full-input" placeholder="team_... หรือชื่อ ID ของคุณ" style="margin-bottom: 16px;">
+            <input type="text" id="vercel-team-id-input" class="full-input" placeholder="team_... หรือชื่อ ID ของคุณ" style="margin-bottom: 12px;">
+            
+            <p style="margin-bottom: 4px; text-align: left; font-size: 13px;">3. Discord Webhook URL (สำหรับแชร์บันทึกเข้า Discord)</p>
+            <input type="text" id="discord-webhook-input" class="full-input" placeholder="https://discord.com/api/webhooks/..." style="margin-bottom: 16px;">
             
             <div class="modal-actions">
                 <button class="btn" id="btn-cancel-ai-api" style="background: var(--card-bg);">ยกเลิก</button>
@@ -455,7 +458,7 @@
     </button>
 
     <script src="app.js?v=14"></script>
-    <script src="ai-chat.js?v=coach_final"></script>
+    <script src="ai-chat.js?v=coach_share_v1"></script>
 <style>
 /* Premium About Modal */
 .about-overlay {

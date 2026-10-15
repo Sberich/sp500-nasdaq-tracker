@@ -12,12 +12,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const configModal = document.getElementById('ai-config-modal');
     const apiKeyInput = document.getElementById('ai-api-key-input');
     const teamIdInput = document.getElementById('vercel-team-id-input');
+    const discordWebhookInput = document.getElementById('discord-webhook-input');
     const saveApiBtn = document.getElementById('btn-save-ai-api');
     const cancelApiBtn = document.getElementById('btn-cancel-ai-api');
 
     // State
     let openaiApiKey = safeGet('OPENAI_API_KEY', '');
     let vercelTeamId = safeGet('VERCEL_TEAM_ID', '');
+    let discordWebhookUrl = safeGet('DISCORD_WEBHOOK_URL', '');
     let isWaitingForResponse = false;
     let messageHistory = [
         { role: 'system', content: 'You are AlphaZone AI, an expert stock market assistant. You help users analyze S&P500 and NASDAQ100 stocks. You use the provided context to answer questions in Thai.' }
@@ -41,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsBtn.addEventListener('click', () => {
         apiKeyInput.value = openaiApiKey;
         if(teamIdInput) teamIdInput.value = vercelTeamId;
+        if(discordWebhookInput) discordWebhookInput.value = discordWebhookUrl;
         configModal.classList.add('active');
     });
 
@@ -51,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveApiBtn.addEventListener('click', () => {
         const key = apiKeyInput.value.trim();
         const teamId = teamIdInput ? teamIdInput.value.trim() : '';
+        const webhook = discordWebhookInput ? discordWebhookInput.value.trim() : '';
         
         if (key) {
             safeSet('OPENAI_API_KEY', key);
@@ -58,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             safeSet('VERCEL_TEAM_ID', teamId);
             vercelTeamId = teamId.trim();
+
+            safeSet('DISCORD_WEBHOOK_URL', webhook);
+            discordWebhookUrl = webhook.trim();
             
             configModal.classList.remove('active');
             appendMessage('ai', 'บันทึกการตั้งค่าเรียบร้อยแล้วครับ! พร้อมใช้งานแล้ว 🚀');
@@ -81,10 +88,144 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sendBtn.addEventListener('click', handleSend);
 
-    function appendMessage(sender, text) {
+    async function copyToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                textArea.remove();
+                return Promise.resolve();
+            } catch (err) {
+                textArea.remove();
+                return Promise.reject(err);
+            }
+        }
+    }
+
+    function appendMessage(sender, text, rawText = '') {
         const msgDiv = document.createElement('div');
         msgDiv.className = `chat-message ${sender}-message`;
         msgDiv.innerHTML = `<div class="message-bubble">${text}</div>`;
+
+        // If message is from AI and we have raw analysis text, add action buttons (Copy & Share to Discord)
+        if (sender === 'ai' && rawText) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+
+            // 1. ปุ่มคัดลอก (Copy)
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'msg-action-btn';
+            copyBtn.innerHTML = '<i class="ri-file-copy-line"></i> คัดลอก';
+            copyBtn.title = 'คัดลอกบทวิเคราะห์นี้';
+            copyBtn.addEventListener('click', async () => {
+                try {
+                    await copyToClipboard(rawText);
+                    const origHtml = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="ri-check-line" style="color:#10b981;"></i> คัดลอกแล้ว!';
+                    copyBtn.classList.add('success');
+                    setTimeout(() => {
+                        copyBtn.innerHTML = origHtml;
+                        copyBtn.classList.remove('success');
+                    }, 2000);
+                } catch (err) {
+                    console.error('Clipboard copy error:', err);
+                    alert('ไม่สามารถคัดลอกได้อัตโนมัติ กรุณาลองเลือกคลุมดำเพื่อคัดลอกครับ');
+                }
+            });
+            actionsDiv.appendChild(copyBtn);
+
+            // 2. ปุ่มแชร์เข้า Discord
+            const discordBtn = document.createElement('button');
+            discordBtn.className = 'msg-action-btn';
+            discordBtn.innerHTML = '<i class="ri-discord-fill" style="color:#5865F2;"></i> แชร์เข้า Discord';
+            discordBtn.title = 'ส่งบทวิเคราะห์นี้ไปยังห้องแชท Discord';
+            discordBtn.addEventListener('click', async () => {
+                if (!discordWebhookUrl) {
+                    alert('ยังไม่ได้ใส่ Discord Webhook URL ครับ!\n\nกรุณากดไอคอนฟันเฟือง ⚙️ ด้านบนขวา แล้วใส่ลิงก์ Webhook จาก Discord ในช่องที่ 3 แล้วกดบันทึก');
+                    configModal.classList.add('active');
+                    if (discordWebhookInput) discordWebhookInput.focus();
+                    return;
+                }
+
+                const origHtml = discordBtn.innerHTML;
+                discordBtn.disabled = true;
+                discordBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> กำลังส่ง...';
+
+                try {
+                    // Extract title from first line of analysis if available
+                    let title = '📊 บทวิเคราะห์ AlphaZone AI Coach';
+                    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+                    if (lines.length > 0) {
+                        const cleanFirst = lines[0].replace(/[#*`_]/g, '').trim();
+                        if (cleanFirst.length > 0 && cleanFirst.length < 100) {
+                            title = cleanFirst;
+                        }
+                    }
+
+                    // Format text for Discord (embed description limit is 4096 chars)
+                    let description = rawText;
+                    if (description.length > 3900) {
+                        description = description.slice(0, 3900) + '\n\n...(ข้อความยาวเกิน ขอยกมาบางส่วน)...';
+                    }
+
+                    const payload = {
+                        username: 'AlphaZone AI Coach',
+                        avatar_url: 'https://cdn-icons-png.flaticon.com/512/4712/4712109.png',
+                        embeds: [
+                            {
+                                title: title,
+                                description: description,
+                                color: 0x38bdf8,
+                                timestamp: new Date().toISOString(),
+                                footer: {
+                                    text: 'AlphaZone Market Intelligence • P-A-R-T Framework'
+                                }
+                            }
+                        ]
+                    };
+
+                    const res = await fetch(discordWebhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok || res.status === 204) {
+                        discordBtn.innerHTML = '<i class="ri-check-line" style="color:#10b981;"></i> แชร์สำเร็จแล้ว!';
+                        discordBtn.classList.add('success');
+                        setTimeout(() => {
+                            discordBtn.innerHTML = origHtml;
+                            discordBtn.disabled = false;
+                            discordBtn.classList.remove('success');
+                        }, 2500);
+                    } else {
+                        const errTxt = await res.text().catch(() => '');
+                        throw new Error(`HTTP ${res.status}: ${errTxt}`);
+                    }
+                } catch (sendErr) {
+                    console.error('Discord Webhook Error:', sendErr);
+                    discordBtn.innerHTML = '<i class="ri-error-warning-line" style="color:#ef4444;"></i> ส่งไม่สำเร็จ';
+                    setTimeout(() => {
+                        discordBtn.innerHTML = origHtml;
+                        discordBtn.disabled = false;
+                    }, 2500);
+                    alert('ส่งเข้า Discord ไม่สำเร็จ! กรุณาตรวจสอบว่า Discord Webhook URL ถูกต้องหรือไม่');
+                }
+            });
+            actionsDiv.appendChild(discordBtn);
+
+            msgDiv.appendChild(actionsDiv);
+        }
+
         chatMessages.appendChild(msgDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -284,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             typingDiv.remove();
-            appendMessage('ai', escapeHtmlForChat(aiReply));
+            appendMessage('ai', escapeHtmlForChat(aiReply), aiReply);
 
             // Save to history (limit to last 10 messages)
             messageHistory.push({ role: 'user', content: text });
