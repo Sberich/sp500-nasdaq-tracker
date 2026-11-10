@@ -32,6 +32,7 @@ let currentIndex = 'all';
 let priceChart = null;
 let latestChartArgs = null;
 let currentLevelsData = null;
+window.currentLevelsData = null;
 let currentScreener = null;
 let currentCapFilter = 'ALL';
 let currentTrendFilter = 'ALL';

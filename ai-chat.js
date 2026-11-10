@@ -294,6 +294,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Fetch deep fundamentals and Wall Street targets from backend cache (with 3.5s timeout)
+    async function fetchStockSummaryDirect(symbol) {
+        if (!symbol) return null;
+        try {
+            // Priority 1: Check if currentLevelsData on window already matches
+            if (typeof window !== 'undefined' && window.currentLevelsData && window.currentLevelsData.symbol === symbol && window.currentLevelsData.summary) {
+                return window.currentLevelsData.summary;
+            }
+            if (typeof currentLevelsData !== 'undefined' && currentLevelsData && currentLevelsData.symbol === symbol && currentLevelsData.summary) {
+                return currentLevelsData.summary;
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+            const apiUrl = (typeof API_URL !== 'undefined' && API_URL) 
+                ? API_URL 
+                : (safeGet('SP_API_URL', '') || 'https://script.google.com/macros/s/AKfycbzKXQWPFCWqNG0MkZlvl4x4uhxYy9F2ppjXGfb523Ek3cgAhiYOpvNzDXlfvZYaP9IF/exec');
+
+            const res = await fetch(`${apiUrl}?action=getLiveLevels&symbol=${encodeURIComponent(symbol)}`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (data && data.success && data.summary) {
+                return data.summary;
+            }
+        } catch (e) {
+            console.warn('Stock summary fetch skipped for AI context:', e.message || e);
+        }
+        return null;
+    }
+
     // Context Gathering with Smart Symbol Extraction
     async function getSystemContext(userText = '') {
         let context = "=== ข้อมูลสดจากระบบ AlphaZone (US Stock S&P 500 / NASDAQ 100) ===\n";
@@ -339,9 +371,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stock.rsi) context += `- RSI(14): ${stock.rsi}\n`;
             });
 
-            // 3.1 แนบข่าวสดล่าสุดจาก Finnhub (ถ้ามี API Key)
+            // 3.1 ข้อมูลปัจจัยพื้นฐานและเป้าหมายจากนักวิเคราะห์ Wall Street
+            const primarySymbol = foundStocks[0].symbol;
+            try {
+                const summary = await fetchStockSummaryDirect(primarySymbol);
+                if (summary && summary.fundamentals) {
+                    const f = summary.fundamentals;
+                    context += `\n[ข้อมูลปัจจัยพื้นฐานและเป้าหมายจากนักวิเคราะห์ Wall Street สำหรับ ${primarySymbol}]\n`;
+                    if (summary.rating) context += `- ฉันทามตินักวิเคราะห์ (Consensus Rating): ${String(summary.rating).toUpperCase()}\n`;
+                    if (f.targetMeanPrice && f.targetMeanPrice !== '-') context += `- ราคาเป้าหมายเฉลี่ย (Target Mean Price): ${f.targetMeanPrice} (Upside คาดหวัง: ${f.upside || 'N/A'})\n`;
+                    if (f.targetHighPrice && f.targetHighPrice !== '-') context += `- กรอบเป้าหมายสูงสุด / ต่ำสุด: ${f.targetHighPrice} / ${f.targetLowPrice}\n`;
+                    if (f.revenueGrowth && f.revenueGrowth !== '-') context += `- อัตราการเติบโตของรายได้ (Revenue Growth): ${f.revenueGrowth}\n`;
+                    if (f.trailingPE && f.trailingPE !== '-') context += `- ค่า P/E ย้อนหลัง (Trailing P/E): ${f.trailingPE}\n`;
+                    if (f.fiftyTwoWeekHigh && f.fiftyTwoWeekHigh !== '-') context += `- กรอบราคา 52 สัปดาห์ (52-Week High / Low): ${f.fiftyTwoWeekHigh} / ${f.fiftyTwoWeekLow}\n`;
+                    if (f.beta && f.beta !== '-') context += `- ความผันผวนเทียบตลาด (Beta): ${f.beta}\n`;
+                    if (f.shortRatio && f.shortRatio !== '-') context += `- อัตราการ Short หุ้น (Short Ratio): ${f.shortRatio}\n`;
+                    if (summary.desc && summary.desc.length > 20) {
+                        context += `- โมเดลธุรกิจหลัก (Business Profile): ${summary.desc.slice(0, 300)}...\n`;
+                    }
+                }
+            } catch (err) {
+                console.warn('Error appending fundamentals to context:', err);
+            }
+
+            // 3.2 แนบข่าวสดล่าสุดจาก Finnhub (ถ้ามี API Key)
             if (finnhubApiKey) {
-                const primarySymbol = foundStocks[0].symbol;
                 try {
                     const newsList = await fetchCompanyNews(primarySymbol, finnhubApiKey);
                     if (newsList && newsList.length > 0) {
@@ -394,17 +448,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 2. Define Master Coach System Instruction (P-A-R-T Framework)
         const coachInstruction = `คุณคือ "AlphaZone AI Investment Coach" โค้ชและที่ปรึกษาการลงทุนหุ้นสหรัฐอเมริกา (S&P 500 & NASDAQ 100) ประจำแพลตฟอร์ม AlphaZone
-กฎเหล็กที่ต้องปฏิบัติ:
-1. ฐานข้อมูล AlphaZone ทั้งหมดคือหุ้นในตลาดสหรัฐอเมริกา (US Market) เท่านั้น ไม่ใช่ตลาดหุ้นไทย (SET/mai) และไม่ใช่เหรียญคริปโตเคอร์เรนซี (เช่น CRWV คือหุ้น CoreWeave ในตลาด NASDAQ ไม่ใช่เหรียญคริปโต CRV Curve)
-2. หากหุ้นตัวใดมีข้อมูลในระบบ AlphaZone แนบมาให้ แสดงว่าจดทะเบียนซื้อขายในตลาดสหรัฐฯ แล้ว ห้ามตอบว่ายังไม่เข้าตลาด หรือรอ IPO/S-1 เด็ดขาด
-3. ตอบเป็นภาษาไทยอย่างมืออาชีพ กระชับ ชัดเจน มีวินัยในการลงทุน
-4. เมื่อผู้ใช้ถามถึงหุ้นตัวใด ให้วิเคราะห์อย่างเป็นระบบตามกรอบ "P-A-R-T Framework":
-   - P (Position & Trend): ประเมินทิศทางและโครงสร้างราคาปัจจุบันจากข้อมูลของระบบ (เช่น strong_up = ขาขึ้นแข็งแกร่ง, strong_down = ขาลง)
-   - A (Action Plan): วางแผนจุดเข้า โซนแนวรับ (S1, S2) สำหรับทยอยสะสม และเป้าหมายทำกำไรที่แนวต้าน (R1, R2)
-   - R (Risk Management): จุดตัดขาดทุน (Stop Loss) ที่แนะนำ และประเมินความคุ้มค่า (Risk:Reward) หากสถานะเป็น strong_down ให้เตือนอย่าเพิ่งรีบรับมีด
-   - T (Trigger & News): ปัจจัยขับเคลื่อนราคาและข่าวสาร หากมีข้อมูลข่าวสารสดแนบมา ให้เจาะลึกวิเคราะห์ว่าข่าวนี้ (Catalyst) มีผลต่อจิตวิทยาตลาดและทิศทางราคาอย่างไร หากไม่มีข่าว ให้สรุปแนวโน้มอุตสาหกรรมและปัจจัยขับเคลื่อนสำคัญ
-5. อ้างอิงตัวเลขราคา แนวรับ-แนวต้าน จากข้อมูลระบบ AlphaZone ที่แนบมาให้เสมอ
-6. จัดรูปแบบข้อความให้อ่านง่าย เว้นบรรทัดชัดเจน ไม่ใช้เส้นคั่น Markdown`;
+กฎเหล็กที่ต้องปฏิบัติอย่างเคร่งครัด:
+1. ฐานข้อมูล AlphaZone ทั้งหมดคือหุ้นในตลาดสหรัฐอเมริกา (US Market) เท่านั้น ไม่ใช่ตลาดหุ้นไทย และไม่ใช่เหรียญคริปโต (เช่น CRWV คือหุ้น CoreWeave ในตลาด NASDAQ ไม่ใช่เหรียญคริปโต)
+2. ตอบเป็นภาษาไทยอย่างมืออาชีพ กระชับ ลึกซึ้ง และมีวินัยการลงทุนสูง ไม่พูดจาน้ำท่วมทุ่งหรือท่องจำสูตร
+3. เมื่อผู้ใช้ถามถึงหุ้นตัวใด ให้วิเคราะห์เจาะลึกตามกรอบ "P-A-R-T Framework" ดังนี้:
+   - P (Position & Trend): ประเมินทิศทางและโครงสร้างราคาปัจจุบัน เชื่อมโยงกับกรอบ 52 สัปดาห์ (52-Week High/Low) และพฤติกรรมราคา (Price Action) วิเคราะห์ว่าเหตุใดจึงเกิดแนวโน้มเช่นนั้น (เช่น รายได้หดตัว หรือถูกเทขายหนักจนใกล้เขตฐานแนวรับสำคัญ) อย่าตอบแค่คำว่า strong_down หรือ strong_up ซ้ำๆ
+   - A (Action Plan): วางแผนจุดเข้าที่แนวรับ (S1, S2) และที่สำคัญคือ **เป้าหมายราคาทำกำไร (R1, R2) ต้องเปรียบเทียบกับราคาเป้าหมายฉันทามติของนักวิเคราะห์ Wall Street (Target Mean Price และ Upside %)** เสมอ เพื่อให้แผนทำกำไรสะท้อนความเป็นจริงและมีแต้มต่อ ไม่เพ้อฝัน
+   - R (Risk Management): กำหนดจุดตัดขาดทุน (Stop Loss) อย่างชัดเจน คำนวณความคุ้มค่า Risk:Reward หากมีข้อมูลค่า Beta (ความผันผวน) หรือ Short Ratio ให้ระบุเตือนความเสี่ยงเฉพาะตัวของหุ้นตัวนั้น หากสถานะเป็น strong_down ให้เน้นย้ำวินัย "ห้ามรีบรับมีด"
+   - T (Trigger & News): 
+     * **กฎเหล็กเรื่องข่าว:** **ห้ามมโนหรือแต่งเรื่องการเมือง/ข่าวลือลอยๆ เด็ดขาด!** 
+     * ให้อิงจากข้อมูลข่าวสดที่แนบมา (ถ้ามี) หรืออ้างอิงจาก **ปัจจัยขับเคลื่อนธุรกิจจริง (Business Catalysts)** เช่น อัตราการเติบโตของรายได้ (Revenue Growth), โมเดลธุรกิจ, ผลประกอบการ, หรือนโยบายอุตสาหกรรมที่จับต้องได้
+     * หากไม่มีข่าวด่วนพิเศษ ให้ระบุตรงๆ ว่า "ไม่มีข่าวด่วนกระทบราคาในรอบสัปดาห์" และวิเคราะห์จาก Valuation (P/E) และแนวโน้มอุตสาหกรรมแทน
+4. อ้างอิงตัวเลขราคา แนวรับ-แนวต้าน และเป้าหมายนักวิเคราะห์จากข้อมูลระบบ AlphaZone ที่แนบมาให้เสมอ
+5. จัดรูปแบบข้อความให้อ่านง่าย เว้นบรรทัดชัดเจน มีช่องไฟ (Breathing Space) และเน้นตัวหนา (**text**) ในจุดสำคัญ`;
 
         const fullSystemInstruction = `${coachInstruction}\n\n${systemContext}`;
 
