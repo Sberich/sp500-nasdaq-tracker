@@ -1668,7 +1668,7 @@ document.addEventListener('DOMContentLoaded', startQuotePolling);
 
 
 // ==========================================
-// Dual Mode Chart (AlphaZone, TradingView Pro & Company Info)
+// Dual Mode Chart (AlphaZone, TradingView Pro & Company News)
 // ==========================================
 function switchChartMode(mode) {
     currentChartMode = mode;
@@ -1698,7 +1698,7 @@ function switchChartMode(mode) {
     } else if (mode === 'tradingview') {
         renderTradingViewWidget(currentSymbol);
     } else if (mode === 'info') {
-        renderCompanyInfoTab();
+        renderCompanyNewsTab();
     }
 }
 
@@ -1777,129 +1777,58 @@ async function renderTradingViewWidget(symbol) {
     }
 }
 
-async function renderCompanyInfoTab() {
+// 📰 Render Dedicated Company News Tab (No duplicates)
+async function renderCompanyNewsTab() {
     const content = document.getElementById('company-info-content');
     if (!content) return;
     
     const stock = allStocks.find(s => s.symbol === currentSymbol);
     if (!stock) {
-        content.innerHTML = '<p class="help-text" style="padding:20px; text-align:center;">กรุณาเลือกหุ้นเพื่อดูข้อมูล</p>';
+        content.innerHTML = '<p class="help-text" style="padding:20px; text-align:center;">กรุณาเลือกหุ้นเพื่อดูข่าวสาร</p>';
         return;
     }
 
     const symbol = stock.symbol;
     const name = stock.name || symbol;
-    const summary = (currentLevelsData && currentLevelsData.summary) ? currentLevelsData.summary : null;
-    const f = (summary && summary.fundamentals) ? summary.fundamentals : {};
-    
-    // 1. Business Description (Thai)
-    let descHtml = (summary && summary.desc && summary.desc.length > 10) 
-        ? summary.desc 
-        : 'กำลังประมวลผลข้อมูลโมเดลธุรกิจภาษาไทยจากระบบ...';
 
-    // 2. Rating Badge
-    let ratingBadge = '';
-    if (summary && summary.rating) {
-        const r = String(summary.rating).replace(/_/g, ' ').toUpperCase();
-        let colorClass = 'pm-sell-btn';
-        if (r.includes('BUY')) colorClass = 'pm-buy-btn';
-        else if (r.includes('HOLD')) colorClass = 'pm-hold-btn';
-        ratingBadge = '<span class="' + colorClass + '" style="font-size:11px; padding:3px 8px; border-radius:6px;">' + r + '</span>';
-    }
-
-    // 3. Portals & Translate Links
     const yahooNewsUrl = 'https://finance.yahoo.com/quote/' + encodeURIComponent(symbol) + '/news/';
     const translateYahooUrl = 'https://finance-yahoo-com.translate.goog/quote/' + encodeURIComponent(symbol) + '/news/?_x_tr_sl=auto&_x_tr_tl=th';
     const cnbcUrl = 'https://www.cnbc.com/quotes/' + encodeURIComponent(symbol) + '?tab=news';
     const googleFinUrl = 'https://www.google.com/finance/quote/' + encodeURIComponent(symbol) + ':NASDAQ';
 
-    const targetPriceStr = (f.targetMeanPrice && f.targetMeanPrice !== '-') ? ('$' + f.targetMeanPrice) : '—';
-    const upsideSign = f.upsideRaw > 0 ? '+' : '';
-    const upsideColorCls = f.upsideRaw > 0 ? 'pm-val-green' : (f.upsideRaw < 0 ? 'pm-val-red' : '');
-    const upsideStr = (f.upside && f.upside !== '-') ? (upsideSign + f.upside) : '—';
-    const revGrowthNum = parseFloat(f.revenueGrowth);
-    const revColorCls = revGrowthNum > 0 ? 'pm-val-green' : (revGrowthNum < 0 ? 'pm-val-red' : '');
-    const revGrowthStr = (f.revenueGrowth && f.revenueGrowth !== '-') ? f.revenueGrowth : '—';
-
     content.innerHTML = 
-        '<div class="c-info-section">' +
-            '<div class="c-info-title">' +
-                '<i class="ri-building-4-line"></i> รู้จักบริษัท & โมเดลธุรกิจ' +
-                '<span class="badge idx-sp" style="font-size:10px; margin-left:auto;">' + escapeHtml(stock.sector || 'US Stock') + '</span>' +
+        '<div class="c-info-section" style="margin-bottom: 10px;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">' +
+                '<div style="display:flex; align-items:center; gap:8px;">' +
+                    '<span style="font-size:16px; font-weight:700; color:var(--text-main);">' + escapeHtml(symbol) + '</span>' +
+                    '<span style="font-size:13px; color:var(--text-muted);">' + escapeHtml(name) + '</span>' +
+                '</div>' +
+                '<span class="badge idx-sp" style="font-size:11px;">' + escapeHtml(stock.sector || 'US Stock') + '</span>' +
             '</div>' +
-            '<div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">' +
-                escapeHtml(name) + ' (' + escapeHtml(symbol) + ')' +
-            '</div>' +
-            '<div class="c-info-desc">' +
-                escapeHtml(descHtml) +
-            '</div>' +
-        '</div>' +
-
-        '<div class="c-info-section">' +
-            '<div class="c-info-title">' +
-                '<i class="ri-bar-chart-box-line"></i> สุขภาพงบ & การเงิน (Financial Vitals)' +
-                (ratingBadge ? ('<span style="margin-left:auto;">' + ratingBadge + '</span>') : '') +
-            '</div>' +
-            '<div class="c-grid-vitals">' +
-                '<div class="c-vital-box">' +
-                    '<span class="c-vital-label">เป้าเฉลี่ย Wall St</span>' +
-                    '<span class="c-vital-val">' + targetPriceStr + '</span>' +
-                '</div>' +
-                '<div class="c-vital-box">' +
-                    '<span class="c-vital-label">Upside ศักยภาพ</span>' +
-                    '<span class="c-vital-val ' + upsideColorCls + '">' + upsideStr + '</span>' +
-                '</div>' +
-                '<div class="c-vital-box">' +
-                    '<span class="c-vital-label">รายได้เติบโต (YoY)</span>' +
-                    '<span class="c-vital-val ' + revColorCls + '">' + revGrowthStr + '</span>' +
-                '</div>' +
-                '<div class="c-vital-box">' +
-                    '<span class="c-vital-label">P/E Ratio</span>' +
-                    '<span class="c-vital-val">' + (f.trailingPE && f.trailingPE !== '-' ? f.trailingPE : '—') + '</span>' +
-                '</div>' +
-                '<div class="c-vital-box">' +
-                    '<span class="c-vital-label">ความผันผวน (Beta)</span>' +
-                    '<span class="c-vital-val">' + (f.beta && f.beta !== '-' ? f.beta : '—') + '</span>' +
-                '</div>' +
-                '<div class="c-vital-box">' +
-                    '<span class="c-vital-label">Short Ratio</span>' +
-                    '<span class="c-vital-val">' + (f.shortRatio && f.shortRatio !== '-' ? f.shortRatio : '—') + '</span>' +
-                '</div>' +
-                '<div class="c-vital-box">' +
-                    '<span class="c-vital-label">Market Cap</span>' +
-                    '<span class="c-vital-val">' + (f.marketCap && f.marketCap !== '-' ? f.marketCap : '—') + '</span>' +
-                '</div>' +
-                '<div class="c-vital-box">' +
-                    '<span class="c-vital-label">เงินปันผล (Yield)</span>' +
-                    '<span class="c-vital-val">' + (f.dividendYield && f.dividendYield !== '-' ? f.dividendYield : '—') + '</span>' +
-                '</div>' +
+            '<div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">ทางลัดอ่านข่าวสดทันที (Direct Portals):</div>' +
+            '<div class="c-portal-links">' +
+                '<a href="' + translateYahooUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn" style="background:rgba(56, 189, 248, 0.15); border-color:var(--accent); color:var(--accent); font-weight:600;">' +
+                    '<i class="ri-translate-2"></i> อ่านข่าวแปลไทย (Yahoo)' +
+                '</a>' +
+                '<a href="' + yahooNewsUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
+                    '<i class="ri-external-link-line"></i> Yahoo Finance' +
+                '</a>' +
+                '<a href="' + cnbcUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
+                    '<i class="ri-external-link-line"></i> CNBC News' +
+                '</a>' +
+                '<a href="' + googleFinUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
+                    '<i class="ri-external-link-line"></i> Google Finance' +
+                '</a>' +
             '</div>' +
         '</div>' +
 
         '<div class="c-info-section">' +
             '<div class="c-info-title">' +
-                '<i class="ri-newspaper-line"></i> ข่าวสารเฉพาะหุ้น (' + escapeHtml(symbol) + ')' +
+                '<i class="ri-newspaper-line"></i> ฟีดข่าวด่วนล่าสุด (' + escapeHtml(symbol) + ')' +
             '</div>' +
             '<div id="c-live-news-box">' +
-                '<div style="display:flex; align-items:center; gap:6px; color:var(--text-muted); font-size:12px; padding: 10px 0;">' +
+                '<div style="display:flex; align-items:center; gap:6px; color:var(--text-muted); font-size:12px; padding: 15px 0;">' +
                     '<div class="spinner-small"></div> กำลังดึงข่าวสดล่าสุด...' +
-                '</div>' +
-            '</div>' +
-            '<div style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 10px;">' +
-                '<div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">สำนักข่าวทางการ & ตัวช่วยแปล:</div>' +
-                '<div class="c-portal-links">' +
-                    '<a href="' + translateYahooUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn" style="background:rgba(56, 189, 248, 0.12); border-color:var(--accent); color:var(--accent); font-weight:600;">' +
-                        '<i class="ri-translate-2"></i> อ่านข่าวแปลไทย (Yahoo)' +
-                    '</a>' +
-                    '<a href="' + yahooNewsUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
-                        '<i class="ri-external-link-line"></i> Yahoo Finance' +
-                    '</a>' +
-                    '<a href="' + cnbcUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
-                        '<i class="ri-external-link-line"></i> CNBC News' +
-                    '</a>' +
-                    '<a href="' + googleFinUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
-                        '<i class="ri-external-link-line"></i> Google Finance' +
-                    '</a>' +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -1914,9 +1843,13 @@ async function fetchLiveCompanyNewsForTab(symbol) {
     const finnhubKey = safeGet('FINNHUB_API_KEY', '');
     if (!finnhubKey) {
         newsBox.innerHTML = 
-            '<div style="font-size:12px; color:var(--text-muted); line-height:1.5; padding: 6px 0;">' +
-                '💡 <em>สามารถกดปุ่ม <strong>"อ่านข่าวแปลไทย"</strong> ด้านล่างเพื่ออ่านข่าวสดฉบับเต็มได้ทันที</em><br>' +
-                '<small style="color:#888;">(หากต้องการให้ดึงพาดหัวข่าวสดมาแสดงในกล่องนี้อัตโนมัติ สามารถใส่ Finnhub API Key ฟรีได้ที่ไอคอนเฟือง ⚙️ ด้านบน)</small>' +
+            '<div style="background:rgba(255,255,255,0.02); border:1px dashed var(--border-color); border-radius:10px; padding:16px; text-align:center; margin:8px 0;">' +
+                '<div style="font-size:24px; margin-bottom:6px;">📰</div>' +
+                '<div style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:4px;">อ่านข่าวสดได้ทันทีผ่านปุ่มทางลัดด้านบน</div>' +
+                '<div style="font-size:12px; color:var(--text-muted); max-width:420px; margin:0 auto 10px auto; line-height:1.5;">' +
+                    'คลิกที่ปุ่ม <strong style="color:var(--accent);">"อ่านข่าวแปลไทย (Yahoo)"</strong> ด้านบน เพื่ออ่านข่าวสดของ ' + escapeHtml(symbol) + ' ในเวอร์ชันภาษาไทยได้ทันทีโดยไม่ต้องใช้ API Key ครับ' +
+                '</div>' +
+                '<div style="font-size:11px; color:#888;">(หากต้องการให้ดึงพาดหัวข่าวสดมาเรียงในกล่องนี้อัตโนมัติ สามารถใส่ Finnhub API Key ฟรีได้ที่ปุ่มเฟือง ⚙️ ด้านบนขวา)</div>' +
             '</div>';
         return;
     }
@@ -1933,7 +1866,7 @@ async function fetchLiveCompanyNewsForTab(symbol) {
         const data = await res.json();
 
         if (Array.isArray(data) && data.length > 0) {
-            const topNews = data.slice(0, 4);
+            const topNews = data.slice(0, 6);
             let html = '';
             topNews.forEach(item => {
                 const dateStr = item.datetime ? new Date(item.datetime * 1000).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
@@ -1942,9 +1875,9 @@ async function fetchLiveCompanyNewsForTab(symbol) {
                         '<a href="' + (item.url || '#') + '" target="_blank" rel="noopener noreferrer" class="c-news-headline">' +
                             escapeHtml(item.headline) +
                         '</a>' +
-                        (item.summary ? ('<div style="font-size:11.5px; color:var(--text-muted); margin-bottom:4px; line-height:1.4;">' + escapeHtml(item.summary.slice(0, 160)) + '...</div>') : '') +
+                        (item.summary ? ('<div style="font-size:12px; color:var(--text-muted); margin-bottom:5px; line-height:1.45;">' + escapeHtml(item.summary.slice(0, 180)) + '...</div>') : '') +
                         '<div class="c-news-meta">' +
-                            '<span style="color:var(--accent); font-weight:500;">' + escapeHtml(item.source || 'Financial Media') + '</span>' +
+                            '<span style="color:var(--accent); font-weight:600;">' + escapeHtml(item.source || 'Financial Media') + '</span>' +
                             '<span>•</span>' +
                             '<span>' + dateStr + '</span>' +
                         '</div>' +
@@ -1952,10 +1885,10 @@ async function fetchLiveCompanyNewsForTab(symbol) {
             });
             newsBox.innerHTML = html;
         } else {
-            newsBox.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:6px 0;">ไม่มีข่าวด่วนสำคัญในรอบ 14 วันที่ผ่านมา</div>';
+            newsBox.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:12px 0; text-align:center;">ไม่พบข่าวด่วนพิเศษในรอบ 14 วันที่ผ่านมา สามารถคลิกปุ่มอ่านข่าวสดจาก Yahoo หรือ CNBC ด้านบนได้ครับ</div>';
         }
     } catch (e) {
         console.warn('Finnhub news in tab error:', e);
-        newsBox.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:6px 0;">ไม่สามารถดึงข่าวอัตโนมัติได้ สามารถกดอ่านผ่านลิงก์สำนักข่าวด้านล่างได้ครับ</div>';
+        newsBox.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0; text-align:center;">ไม่สามารถดึงข่าวอัตโนมัติได้ สามารถกดอ่านผ่านปุ่มทางลัดด้านบนได้ทันทีครับ</div>';
     }
 }
