@@ -33,6 +33,9 @@ let priceChart = null;
 let latestChartArgs = null;
 let currentLevelsData = null;
 window.currentLevelsData = null;
+let currentChartMode = 'alphazone';
+let isTradingViewScriptLoaded = false;
+let currentTradingViewSymbol = '';
 let currentScreener = null;
 let currentCapFilter = 'ALL';
 let currentTrendFilter = 'ALL';
@@ -181,6 +184,9 @@ function setupEventListeners() {
     document.getElementById('btn-back').addEventListener('click', () => {
         elDetailPanel.classList.remove('active');
         document.querySelectorAll('.stock-card').forEach(c => c.classList.remove('active'));
+        const tvTarget = document.getElementById('tradingview_widget_target');
+        if (tvTarget) tvTarget.innerHTML = '';
+        currentTradingViewSymbol = '';
     });
 
     // Reset Zoom
@@ -716,6 +722,7 @@ function openDetail(symbol) {
     
     currentSymbol = symbol;
     if (typeof renderWatchLinesUI === 'function') renderWatchLinesUI();
+    if (typeof switchChartMode === 'function') switchChartMode('alphazone');
     // UI Transitions
     elEmptyState.classList.add('hidden');
     elDetailContent.classList.remove('hidden');
@@ -1657,3 +1664,115 @@ function startQuotePolling() {
     }, 45000); // 45 seconds
 }
 document.addEventListener('DOMContentLoaded', startQuotePolling);
+
+
+// ==========================================
+// Dual Mode Chart (AlphaZone & TradingView Pro)
+// ==========================================
+function switchChartMode(mode) {
+    currentChartMode = mode;
+
+    const btnAZ = document.getElementById('tab-btn-alphazone');
+    const btnTV = document.getElementById('tab-btn-tradingview');
+    const viewAZ = document.getElementById('view-alphazone-chart');
+    const viewTV = document.getElementById('view-tradingview-chart');
+    const tvHint = document.getElementById('chart-tv-hint');
+
+    if (!btnAZ || !btnTV || !viewAZ || !viewTV) return;
+
+    if (mode === 'alphazone') {
+        btnAZ.classList.add('active');
+        btnTV.classList.remove('active');
+        viewAZ.style.display = 'block';
+        viewTV.style.display = 'none';
+        if (tvHint) tvHint.style.display = 'none';
+        
+        // Resize Chart.js to ensure crisp canvas rendering after unhiding
+        if (priceChart) priceChart.resize();
+    } else {
+        btnAZ.classList.remove('active');
+        btnTV.classList.add('active');
+        viewAZ.style.display = 'none';
+        viewTV.style.display = 'block';
+        if (tvHint) tvHint.style.display = 'block';
+
+        // Lazy load TradingView widget only when clicked
+        renderTradingViewWidget(currentSymbol);
+    }
+}
+
+function loadTradingViewScript() {
+    return new Promise((resolve, reject) => {
+        if (typeof TradingView !== 'undefined') {
+            resolve();
+            return;
+        }
+        if (isTradingViewScriptLoaded) {
+            const checkInterval = setInterval(() => {
+                if (typeof TradingView !== 'undefined') {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 50);
+            return;
+        }
+        isTradingViewScriptLoaded = true;
+        const script = document.createElement('script');
+        script.src = 'https://s3.tradingview.com/tv.js';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Failed to load TradingView script'));
+        document.head.appendChild(script);
+    });
+}
+
+async function renderTradingViewWidget(symbol) {
+    if (!symbol) return;
+    const target = document.getElementById('tradingview_widget_target');
+    const loader = document.getElementById('tv-chart-loading');
+    if (!target) return;
+
+    // If already showing this symbol in TV, do nothing
+    if (currentTradingViewSymbol === symbol && target.innerHTML.trim().length > 0) {
+        if (loader) loader.style.display = 'none';
+        target.style.display = 'block';
+        return;
+    }
+
+    if (loader) {
+        loader.style.display = 'flex';
+        loader.innerHTML = '<div class="spinner" style="width:20px; height:20px;"></div> กำลังเชื่อมต่อ TradingView...';
+    }
+    target.style.display = 'none';
+    target.innerHTML = ''; // clear previous widget to save memory
+
+    try {
+        await loadTradingViewScript();
+
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        
+        new TradingView.widget({
+            "autosize": true,
+            "symbol": symbol,
+            "interval": "D",
+            "timezone": "Asia/Bangkok",
+            "theme": isDark ? "dark" : "light",
+            "style": "1",
+            "locale": "th_TH",
+            "toolbar_bg": isDark ? "#121212" : "#f1f3f6",
+            "enable_publishing": false,
+            "allow_symbol_change": true,
+            "hide_top_toolbar": false,
+            "hide_legend": false,
+            "save_image": false,
+            "container_id": "tradingview_widget_target"
+        });
+
+        currentTradingViewSymbol = symbol;
+        if (loader) loader.style.display = 'none';
+        target.style.display = 'block';
+    } catch (e) {
+        console.warn('TradingView render error:', e);
+        if (loader) loader.innerHTML = '<span style="color:var(--red);"><i class="ri-error-warning-line"></i> ไม่สามารถเชื่อมต่อ TradingView ได้ในขณะนี้</span>';
+    }
+}

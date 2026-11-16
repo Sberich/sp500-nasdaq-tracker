@@ -32,7 +32,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><defs><filter id='g' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='3' result='b1'/><feGaussianBlur stdDeviation='8' result='b2'/><feMerge><feMergeNode in='b2'/><feMergeNode in='b1'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><path d='M 0 50 L 25 50 L 45 10 L 60 90 L 75 50 L 100 50' stroke='%2300ffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' filter='url(%23g)'/></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css?v=14">
+    <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -323,34 +323,60 @@
                             </div>
                         </div>
 
-                        <!-- Chart Section -->
+                        <!-- Chart Section with Dual Mode -->
                         <div class="chart-card glass">
-                            <div class="chart-header">
-                                <div class="range-selector">
-                                    <button class="range-btn" data-range="1H">1H</button>
-                                    <button class="range-btn" data-range="4H">4H</button>
-                                    <button class="range-btn active" data-range="1D">1D</button>
-                                    <button class="range-btn" data-range="1W">1W</button>
-                                    <button class="range-btn" data-range="1M">1M</button>
-                                    <button class="range-btn" data-range="YTD">YTD</button>
+                            <!-- Dual Mode Tabs Header -->
+                            <div class="chart-tab-bar">
+                                <div class="chart-tabs">
+                                    <button class="chart-tab-btn active" id="tab-btn-alphazone" onclick="switchChartMode('alphazone')">
+                                        <i class="ri-line-chart-line"></i> AlphaZone (รับ-ต้าน)
+                                    </button>
+                                    <button class="chart-tab-btn" id="tab-btn-tradingview" onclick="switchChartMode('tradingview')">
+                                        <i class="ri-bar-chart-box-line"></i> TradingView Pro
+                                    </button>
                                 </div>
-                                <div class="chart-legend">
-                                    <span class="legend-item"><span class="dot blue"></span> ราคาปิด</span>
-                                    <span class="legend-item"><span class="dot orange"></span> <span id="ema-label">EMA</span></span>
-                                    <span class="legend-item rsi-box" id="chart-rsi-badge" style="font-size:11px;font-weight:600;"></span>
-                                </div>
-                            </div>
-                            
-                            <div class="canvas-container">
-                                <canvas id="priceChart"></canvas>
-                                <div class="chart-loader" id="chart-loading">
-                                    <div class="spinner"></div>
+                                <div id="chart-tv-hint" class="chart-tv-hint" style="display:none;">
+                                    <span class="live-dot">●</span> กราฟแท่งเทียนสด
                                 </div>
                             </div>
 
-                            <div class="chart-footer" style="display:flex; justify-content:space-between; align-items:center; width:100%; padding: 0 10px;">
-                                <div id="watch-lines-list" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-                                <button class="action-btn-small" id="btn-reset-zoom"><i class="ri-refresh-line"></i> Reset</button>
+                            <!-- VIEW 1: AlphaZone Chart (Chart.js with Support/Resistance & Pinned Lines) -->
+                            <div id="view-alphazone-chart">
+                                <div class="chart-header">
+                                    <div class="range-selector">
+                                        <button class="range-btn" data-range="1H">1H</button>
+                                        <button class="range-btn" data-range="4H">4H</button>
+                                        <button class="range-btn active" data-range="1D">1D</button>
+                                        <button class="range-btn" data-range="1W">1W</button>
+                                        <button class="range-btn" data-range="1M">1M</button>
+                                        <button class="range-btn" data-range="YTD">YTD</button>
+                                    </div>
+                                    <div class="chart-legend">
+                                        <span class="legend-item"><span class="dot blue"></span> ราคาปิด</span>
+                                        <span class="legend-item"><span class="dot orange"></span> <span id="ema-label">EMA</span></span>
+                                        <span class="legend-item rsi-box" id="chart-rsi-badge" style="font-size:11px;font-weight:600;"></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="canvas-container">
+                                    <canvas id="priceChart"></canvas>
+                                    <div class="chart-loader" id="chart-loading">
+                                        <div class="spinner"></div>
+                                    </div>
+                                </div>
+
+                                <div class="chart-footer" style="display:flex; justify-content:space-between; align-items:center; width:100%; padding: 0 10px;">
+                                    <div id="watch-lines-list" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+                                    <button class="action-btn-small" id="btn-reset-zoom"><i class="ri-refresh-line"></i> Reset</button>
+                                </div>
+                            </div>
+
+                            <!-- VIEW 2: TradingView Chart (Lazy Loaded Container) -->
+                            <div id="view-tradingview-chart" style="display:none; width:100%; height:400px; position:relative; border-radius:10px; overflow:hidden;">
+                                <div id="tv-chart-loading" style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted); font-size:13px; gap:8px;">
+                                    <div class="spinner" style="width:20px; height:20px;"></div> กำลังเชื่อมต่อ TradingView...
+                                </div>
+                                <div id="tradingview_widget_target" style="width:100%; height:100%; display:none;"></div>
                             </div>
                         </div>
 
@@ -463,7 +489,7 @@
         <i class="ri-robot-2-line"></i>
     </button>
 
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15_dual_chart"></script>
     <script src="ai-chat.js?v=coach_institutional_v2"></script>
 <style>
 /* Premium About Modal */
