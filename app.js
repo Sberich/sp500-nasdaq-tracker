@@ -801,6 +801,7 @@ async function loadLiveLevels() {
             renderLiveLevels(data);
             if (data.summary) {
                 renderSummary(data.summary);
+                if (currentChartMode === 'info') renderCompanyInfoTab();
             }
             addChartAnnotations();
         } else {
@@ -1667,37 +1668,37 @@ document.addEventListener('DOMContentLoaded', startQuotePolling);
 
 
 // ==========================================
-// Dual Mode Chart (AlphaZone & TradingView Pro)
+// Dual Mode Chart (AlphaZone, TradingView Pro & Company Info)
 // ==========================================
 function switchChartMode(mode) {
     currentChartMode = mode;
 
     const btnAZ = document.getElementById('tab-btn-alphazone');
     const btnTV = document.getElementById('tab-btn-tradingview');
+    const btnInfo = document.getElementById('tab-btn-info');
     const viewAZ = document.getElementById('view-alphazone-chart');
     const viewTV = document.getElementById('view-tradingview-chart');
+    const viewInfo = document.getElementById('view-company-info');
     const tvHint = document.getElementById('chart-tv-hint');
 
     if (!btnAZ || !btnTV || !viewAZ || !viewTV) return;
 
-    if (mode === 'alphazone') {
-        btnAZ.classList.add('active');
-        btnTV.classList.remove('active');
-        viewAZ.style.display = 'block';
-        viewTV.style.display = 'none';
-        if (tvHint) tvHint.style.display = 'none';
-        
-        // Resize Chart.js to ensure crisp canvas rendering after unhiding
-        if (priceChart) priceChart.resize();
-    } else {
-        btnAZ.classList.remove('active');
-        btnTV.classList.add('active');
-        viewAZ.style.display = 'none';
-        viewTV.style.display = 'block';
-        if (tvHint) tvHint.style.display = 'block';
+    btnAZ.classList.toggle('active', mode === 'alphazone');
+    btnTV.classList.toggle('active', mode === 'tradingview');
+    if (btnInfo) btnInfo.classList.toggle('active', mode === 'info');
 
-        // Lazy load TradingView widget only when clicked
+    viewAZ.style.display = (mode === 'alphazone') ? 'block' : 'none';
+    viewTV.style.display = (mode === 'tradingview') ? 'block' : 'none';
+    if (viewInfo) viewInfo.style.display = (mode === 'info') ? 'block' : 'none';
+
+    if (tvHint) tvHint.style.display = (mode === 'tradingview') ? 'block' : 'none';
+
+    if (mode === 'alphazone') {
+        if (priceChart) priceChart.resize();
+    } else if (mode === 'tradingview') {
         renderTradingViewWidget(currentSymbol);
+    } else if (mode === 'info') {
+        renderCompanyInfoTab();
     }
 }
 
@@ -1732,7 +1733,6 @@ async function renderTradingViewWidget(symbol) {
     const loader = document.getElementById('tv-chart-loading');
     if (!target) return;
 
-    // If already showing this symbol in TV, do nothing
     if (currentTradingViewSymbol === symbol && target.innerHTML.trim().length > 0) {
         if (loader) loader.style.display = 'none';
         target.style.display = 'block';
@@ -1744,7 +1744,7 @@ async function renderTradingViewWidget(symbol) {
         loader.innerHTML = '<div class="spinner" style="width:20px; height:20px;"></div> กำลังเชื่อมต่อ TradingView...';
     }
     target.style.display = 'none';
-    target.innerHTML = ''; // clear previous widget to save memory
+    target.innerHTML = '';
 
     try {
         await loadTradingViewScript();
@@ -1774,5 +1774,188 @@ async function renderTradingViewWidget(symbol) {
     } catch (e) {
         console.warn('TradingView render error:', e);
         if (loader) loader.innerHTML = '<span style="color:var(--red);"><i class="ri-error-warning-line"></i> ไม่สามารถเชื่อมต่อ TradingView ได้ในขณะนี้</span>';
+    }
+}
+
+async function renderCompanyInfoTab() {
+    const content = document.getElementById('company-info-content');
+    if (!content) return;
+    
+    const stock = allStocks.find(s => s.symbol === currentSymbol);
+    if (!stock) {
+        content.innerHTML = '<p class="help-text" style="padding:20px; text-align:center;">กรุณาเลือกหุ้นเพื่อดูข้อมูล</p>';
+        return;
+    }
+
+    const symbol = stock.symbol;
+    const name = stock.name || symbol;
+    const summary = (currentLevelsData && currentLevelsData.summary) ? currentLevelsData.summary : null;
+    const f = (summary && summary.fundamentals) ? summary.fundamentals : {};
+    
+    // 1. Business Description (Thai)
+    let descHtml = (summary && summary.desc && summary.desc.length > 10) 
+        ? summary.desc 
+        : 'กำลังประมวลผลข้อมูลโมเดลธุรกิจภาษาไทยจากระบบ...';
+
+    // 2. Rating Badge
+    let ratingBadge = '';
+    if (summary && summary.rating) {
+        const r = String(summary.rating).replace(/_/g, ' ').toUpperCase();
+        let colorClass = 'pm-sell-btn';
+        if (r.includes('BUY')) colorClass = 'pm-buy-btn';
+        else if (r.includes('HOLD')) colorClass = 'pm-hold-btn';
+        ratingBadge = '<span class="' + colorClass + '" style="font-size:11px; padding:3px 8px; border-radius:6px;">' + r + '</span>';
+    }
+
+    // 3. Portals & Translate Links
+    const yahooNewsUrl = 'https://finance.yahoo.com/quote/' + encodeURIComponent(symbol) + '/news/';
+    const translateYahooUrl = 'https://finance-yahoo-com.translate.goog/quote/' + encodeURIComponent(symbol) + '/news/?_x_tr_sl=auto&_x_tr_tl=th';
+    const cnbcUrl = 'https://www.cnbc.com/quotes/' + encodeURIComponent(symbol) + '?tab=news';
+    const googleFinUrl = 'https://www.google.com/finance/quote/' + encodeURIComponent(symbol) + ':NASDAQ';
+
+    const targetPriceStr = (f.targetMeanPrice && f.targetMeanPrice !== '-') ? ('$' + f.targetMeanPrice) : '—';
+    const upsideSign = f.upsideRaw > 0 ? '+' : '';
+    const upsideColorCls = f.upsideRaw > 0 ? 'pm-val-green' : (f.upsideRaw < 0 ? 'pm-val-red' : '');
+    const upsideStr = (f.upside && f.upside !== '-') ? (upsideSign + f.upside) : '—';
+    const revGrowthNum = parseFloat(f.revenueGrowth);
+    const revColorCls = revGrowthNum > 0 ? 'pm-val-green' : (revGrowthNum < 0 ? 'pm-val-red' : '');
+    const revGrowthStr = (f.revenueGrowth && f.revenueGrowth !== '-') ? f.revenueGrowth : '—';
+
+    content.innerHTML = 
+        '<div class="c-info-section">' +
+            '<div class="c-info-title">' +
+                '<i class="ri-building-4-line"></i> รู้จักบริษัท & โมเดลธุรกิจ' +
+                '<span class="badge idx-sp" style="font-size:10px; margin-left:auto;">' + escapeHtml(stock.sector || 'US Stock') + '</span>' +
+            '</div>' +
+            '<div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">' +
+                escapeHtml(name) + ' (' + escapeHtml(symbol) + ')' +
+            '</div>' +
+            '<div class="c-info-desc">' +
+                escapeHtml(descHtml) +
+            '</div>' +
+        '</div>' +
+
+        '<div class="c-info-section">' +
+            '<div class="c-info-title">' +
+                '<i class="ri-bar-chart-box-line"></i> สุขภาพงบ & การเงิน (Financial Vitals)' +
+                (ratingBadge ? ('<span style="margin-left:auto;">' + ratingBadge + '</span>') : '') +
+            '</div>' +
+            '<div class="c-grid-vitals">' +
+                '<div class="c-vital-box">' +
+                    '<span class="c-vital-label">เป้าเฉลี่ย Wall St</span>' +
+                    '<span class="c-vital-val">' + targetPriceStr + '</span>' +
+                '</div>' +
+                '<div class="c-vital-box">' +
+                    '<span class="c-vital-label">Upside ศักยภาพ</span>' +
+                    '<span class="c-vital-val ' + upsideColorCls + '">' + upsideStr + '</span>' +
+                '</div>' +
+                '<div class="c-vital-box">' +
+                    '<span class="c-vital-label">รายได้เติบโต (YoY)</span>' +
+                    '<span class="c-vital-val ' + revColorCls + '">' + revGrowthStr + '</span>' +
+                '</div>' +
+                '<div class="c-vital-box">' +
+                    '<span class="c-vital-label">P/E Ratio</span>' +
+                    '<span class="c-vital-val">' + (f.trailingPE && f.trailingPE !== '-' ? f.trailingPE : '—') + '</span>' +
+                '</div>' +
+                '<div class="c-vital-box">' +
+                    '<span class="c-vital-label">ความผันผวน (Beta)</span>' +
+                    '<span class="c-vital-val">' + (f.beta && f.beta !== '-' ? f.beta : '—') + '</span>' +
+                '</div>' +
+                '<div class="c-vital-box">' +
+                    '<span class="c-vital-label">Short Ratio</span>' +
+                    '<span class="c-vital-val">' + (f.shortRatio && f.shortRatio !== '-' ? f.shortRatio : '—') + '</span>' +
+                '</div>' +
+                '<div class="c-vital-box">' +
+                    '<span class="c-vital-label">Market Cap</span>' +
+                    '<span class="c-vital-val">' + (f.marketCap && f.marketCap !== '-' ? f.marketCap : '—') + '</span>' +
+                '</div>' +
+                '<div class="c-vital-box">' +
+                    '<span class="c-vital-label">เงินปันผล (Yield)</span>' +
+                    '<span class="c-vital-val">' + (f.dividendYield && f.dividendYield !== '-' ? f.dividendYield : '—') + '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+
+        '<div class="c-info-section">' +
+            '<div class="c-info-title">' +
+                '<i class="ri-newspaper-line"></i> ข่าวสารเฉพาะหุ้น (' + escapeHtml(symbol) + ')' +
+            '</div>' +
+            '<div id="c-live-news-box">' +
+                '<div style="display:flex; align-items:center; gap:6px; color:var(--text-muted); font-size:12px; padding: 10px 0;">' +
+                    '<div class="spinner-small"></div> กำลังดึงข่าวสดล่าสุด...' +
+                '</div>' +
+            '</div>' +
+            '<div style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 10px;">' +
+                '<div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">สำนักข่าวทางการ & ตัวช่วยแปล:</div>' +
+                '<div class="c-portal-links">' +
+                    '<a href="' + translateYahooUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn" style="background:rgba(56, 189, 248, 0.12); border-color:var(--accent); color:var(--accent); font-weight:600;">' +
+                        '<i class="ri-translate-2"></i> อ่านข่าวแปลไทย (Yahoo)' +
+                    '</a>' +
+                    '<a href="' + yahooNewsUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
+                        '<i class="ri-external-link-line"></i> Yahoo Finance' +
+                    '</a>' +
+                    '<a href="' + cnbcUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
+                        '<i class="ri-external-link-line"></i> CNBC News' +
+                    '</a>' +
+                    '<a href="' + googleFinUrl + '" target="_blank" rel="noopener noreferrer" class="c-portal-btn">' +
+                        '<i class="ri-external-link-line"></i> Google Finance' +
+                    '</a>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    fetchLiveCompanyNewsForTab(symbol);
+}
+
+async function fetchLiveCompanyNewsForTab(symbol) {
+    const newsBox = document.getElementById('c-live-news-box');
+    if (!newsBox) return;
+
+    const finnhubKey = safeGet('FINNHUB_API_KEY', '');
+    if (!finnhubKey) {
+        newsBox.innerHTML = 
+            '<div style="font-size:12px; color:var(--text-muted); line-height:1.5; padding: 6px 0;">' +
+                '💡 <em>สามารถกดปุ่ม <strong>"อ่านข่าวแปลไทย"</strong> ด้านล่างเพื่ออ่านข่าวสดฉบับเต็มได้ทันที</em><br>' +
+                '<small style="color:#888;">(หากต้องการให้ดึงพาดหัวข่าวสดมาแสดงในกล่องนี้อัตโนมัติ สามารถใส่ Finnhub API Key ฟรีได้ที่ไอคอนเฟือง ⚙️ ด้านบน)</small>' +
+            '</div>';
+        return;
+    }
+
+    try {
+        const toDate = new Date().toISOString().split('T')[0];
+        const fromDateObj = new Date();
+        fromDateObj.setDate(fromDateObj.getDate() - 14);
+        const fromDate = fromDateObj.toISOString().split('T')[0];
+
+        const url = 'https://finnhub.io/api/v1/company-news?symbol=' + encodeURIComponent(symbol) + '&from=' + fromDate + '&to=' + toDate + '&token=' + encodeURIComponent(finnhubKey);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        if (Array.isArray(data) && data.length > 0) {
+            const topNews = data.slice(0, 4);
+            let html = '';
+            topNews.forEach(item => {
+                const dateStr = item.datetime ? new Date(item.datetime * 1000).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+                html += 
+                    '<div class="c-news-item">' +
+                        '<a href="' + (item.url || '#') + '" target="_blank" rel="noopener noreferrer" class="c-news-headline">' +
+                            escapeHtml(item.headline) +
+                        '</a>' +
+                        (item.summary ? ('<div style="font-size:11.5px; color:var(--text-muted); margin-bottom:4px; line-height:1.4;">' + escapeHtml(item.summary.slice(0, 160)) + '...</div>') : '') +
+                        '<div class="c-news-meta">' +
+                            '<span style="color:var(--accent); font-weight:500;">' + escapeHtml(item.source || 'Financial Media') + '</span>' +
+                            '<span>•</span>' +
+                            '<span>' + dateStr + '</span>' +
+                        '</div>' +
+                    '</div>';
+            });
+            newsBox.innerHTML = html;
+        } else {
+            newsBox.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:6px 0;">ไม่มีข่าวด่วนสำคัญในรอบ 14 วันที่ผ่านมา</div>';
+        }
+    } catch (e) {
+        console.warn('Finnhub news in tab error:', e);
+        newsBox.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:6px 0;">ไม่สามารถดึงข่าวอัตโนมัติได้ สามารถกดอ่านผ่านลิงก์สำนักข่าวด้านล่างได้ครับ</div>';
     }
 }

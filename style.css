@@ -1601,3 +1601,116 @@ input {
     50% { opacity: 0.3; }
     100% { opacity: 1; }
 }
+
+
+/* --- Company Info Tab Styles --- */
+#view-company-info::-webkit-scrollbar {
+    width: 6px;
+}
+#view-company-info::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+#view-company-info::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+.c-info-section {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+.c-info-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent, #38bdf8);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.c-info-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+.c-grid-vitals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+.c-vital-box {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.c-vital-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+}
+.c-vital-val {
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-main);
+}
+.c-news-item {
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 0;
+}
+.c-news-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.c-news-headline {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-main);
+    text-decoration: none;
+    display: block;
+    margin-bottom: 4px;
+    line-height: 1.4;
+    transition: color 0.15s;
+}
+.c-news-headline:hover {
+    color: var(--accent, #38bdf8);
+}
+.c-news-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.c-portal-links {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+.c-portal-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    color: var(--text-main);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+}
+.c-portal-btn:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+}

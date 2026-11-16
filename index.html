@@ -32,7 +32,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><defs><filter id='g' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='3' result='b1'/><feGaussianBlur stdDeviation='8' result='b2'/><feMerge><feMergeNode in='b2'/><feMergeNode in='b1'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><path d='M 0 50 L 25 50 L 45 10 L 60 90 L 75 50 L 100 50' stroke='%2300ffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' filter='url(%23g)'/></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css?v=15">
+    <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
@@ -334,6 +334,9 @@
                                     <button class="chart-tab-btn" id="tab-btn-tradingview" onclick="switchChartMode('tradingview')">
                                         <i class="ri-bar-chart-box-line"></i> TradingView Pro
                                     </button>
+                                    <button class="chart-tab-btn" id="tab-btn-info" onclick="switchChartMode('info')">
+                                        <i class="ri-building-line"></i> รู้จักบริษัท & ข่าว
+                                    </button>
                                 </div>
                                 <div id="chart-tv-hint" class="chart-tv-hint" style="display:none;">
                                     <span class="live-dot">●</span> กราฟแท่งเทียนสด
@@ -377,6 +380,11 @@
                                     <div class="spinner" style="width:20px; height:20px;"></div> กำลังเชื่อมต่อ TradingView...
                                 </div>
                                 <div id="tradingview_widget_target" style="width:100%; height:100%; display:none;"></div>
+                            </div>
+
+                            <!-- VIEW 3: Company Info, Fundamentals & News -->
+                            <div id="view-company-info" style="display:none; width:100%; height:420px; overflow-y:auto; padding-right:4px;">
+                                <div id="company-info-content"></div>
                             </div>
                         </div>
 
@@ -489,7 +497,7 @@
         <i class="ri-robot-2-line"></i>
     </button>
 
-    <script src="app.js?v=15_dual_chart"></script>
+    <script src="app.js?v=16_company_info"></script>
     <script src="ai-chat.js?v=coach_institutional_v2"></script>
 <style>
 /* Premium About Modal */
