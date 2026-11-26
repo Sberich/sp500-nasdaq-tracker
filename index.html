@@ -32,7 +32,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><defs><filter id='g' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='3' result='b1'/><feGaussianBlur stdDeviation='8' result='b2'/><feMerge><feMergeNode in='b2'/><feMergeNode in='b1'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><path d='M 0 50 L 25 50 L 45 10 L 60 90 L 75 50 L 100 50' stroke='%2300ffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' filter='url(%23g)'/></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="style.css?v=19_5pillar_coach">
 </head>
 <body>
 
@@ -249,22 +249,49 @@
 
                 <div class="detail-content hidden" id="detail-content">
                     <div class="detail-header glass">
-                        <button class="icon-btn mobile-back-btn" id="btn-back">
-                            <i class="ri-arrow-left-line"></i>
-                        </button>
-                        <div class="stock-title-group">
-                            <h2 class="mono" id="d-symbol">AAPL</h2>
-                            <span class="badge" id="d-idx-badge">NASDAQ</span>
+                        <div class="detail-header-left">
+                            <button class="icon-btn mobile-back-btn" id="btn-back">
+                                <i class="ri-arrow-left-line"></i>
+                            </button>
+                            <div class="stock-title-group">
+                                <h2 class="mono" id="d-symbol">AAPL</h2>
+                                <span class="badge" id="d-idx-badge">NASDAQ</span>
+                                <span class="hdr-company-name" id="d-hdr-fullname">Apple Inc.</span>
+                            </div>
                         </div>
                         <div class="action-group">
-                            <button class="icon-btn watch-btn" id="d-watch-btn"><i class="ri-eye-line"></i></button>
-                            <button class="icon-btn fav-btn" id="d-fav-btn"><i class="ri-star-line"></i></button>
+                            <button class="ws-ctrl-btn" id="btn-toggle-hero" onclick="toggleHeroCard()" title="กาง/ย่อข้อมูลพื้นฐานแบบเต็ม">
+                                <i class="ri-layout-top-2-line"></i> <span id="lbl-toggle-hero">ข้อมูลครบชุด</span> <i class="ri-arrow-down-s-line" id="icon-toggle-hero"></i>
+                            </button>
+                            <button class="ws-ctrl-btn accent" id="btn-focus-chart" onclick="toggleChartFocusMode()" title="ขยายกราฟเต็มจอ (กดปุ่ม F)">
+                                <i class="ri-fullscreen-line" id="icon-focus-chart"></i> <span id="lbl-focus-chart">ขยายกราฟ</span>
+                            </button>
+                            <button class="icon-btn watch-btn" id="d-watch-btn" title="เฝ้าดู"><i class="ri-eye-line"></i></button>
+                            <button class="icon-btn fav-btn" id="d-fav-btn" title="รายการโปรด"><i class="ri-star-line"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Compact Telemetry Strip (visible when Hero is collapsed for maximum chart area) -->
+                    <div class="compact-telemetry-bar glass" id="compact-telemetry-bar">
+                        <div class="ct-price-cluster">
+                            <span class="ct-price mono" id="ct-price">$0.00</span>
+                            <span class="ct-change mono" id="ct-change">-</span>
+                            <span class="ct-ext mono" id="ct-ext" style="display:none;"></span>
+                        </div>
+                        <div class="ct-divider"></div>
+                        <div class="ct-pills" id="ct-pills">
+                            <span class="ct-chip" id="ct-trend">—</span>
+                            <span class="ct-chip mono" id="ct-ema" style="display:none;">EMA —</span>
+                            <span class="ct-chip mono" id="ct-rsi">RSI: —</span>
+                            <span class="ct-chip mono" id="ct-s1">S1: —</span>
+                            <span class="ct-chip mono" id="ct-r1">R1: —</span>
+                            <span class="ct-chip mono" id="ct-target" style="display:none;">Target: —</span>
                         </div>
                     </div>
 
                     <div class="detail-scroll">
-                        <!-- Hero Price Info -->
-                        <div class="hero-card glass">
+                        <!-- Hero Price Info (Collapsible) -->
+                        <div class="hero-card glass is-collapsed" id="hero-card">
                             <div class="hero-left">
                                 <h2 class="pm-title" id="d-fullname" style="margin-bottom: 2px;">Apple Inc.</h2>
                                 <div class="pm-subtitle" id="d-sector">Technology</div>
@@ -323,7 +350,7 @@
                             </div>
                         </div>
 
-                        <!-- Chart Section with Dual Mode -->
+                        <!-- Chart Section with Dual Mode (Full Width) -->
                         <div class="chart-card glass">
                             <!-- Dual Mode Tabs Header -->
                             <div class="chart-tab-bar">
@@ -375,7 +402,7 @@
                             </div>
 
                             <!-- VIEW 2: TradingView Chart (Lazy Loaded Container) -->
-                            <div id="view-tradingview-chart" style="display:none; width:100%; height:400px; position:relative; border-radius:10px; overflow:hidden;">
+                            <div id="view-tradingview-chart" class="tv-chart-box" style="display:none; width:100%; position:relative; border-radius:10px; overflow:hidden;">
                                 <div id="tv-chart-loading" style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted); font-size:13px; gap:8px;">
                                     <div class="spinner" style="width:20px; height:20px;"></div> กำลังเชื่อมต่อ TradingView...
                                 </div>
@@ -383,7 +410,7 @@
                             </div>
 
                             <!-- VIEW 3: Company Info, Fundamentals & News -->
-                            <div id="view-company-info" style="display:none; width:100%; height:420px; overflow-y:auto; padding-right:4px;">
+                            <div id="view-company-info" class="company-info-box" style="display:none; width:100%; overflow-y:auto; padding-right:4px;">
                                 <div id="company-info-content"></div>
                             </div>
                         </div>
@@ -421,7 +448,7 @@
                         </div>
 
                         <!-- Company Description -->
-                        <div class="about-card glass" id="d-company-desc" style="display:none; margin-top: 16px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                        <div class="about-card glass" id="d-company-desc" style="display:none; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
                         </div>
 
 </div>
@@ -448,46 +475,101 @@
     <div id="ai-chat-container" class="ai-chat-hidden">
         <div class="ai-chat-header glass">
             <div class="ai-chat-title">
-                <i class="ri-robot-2-line"></i> AlphaZone AI
+                <i class="ri-robot-2-line"></i> AlphaZone AI Coach
             </div>
             <div class="ai-chat-actions">
-                <button id="ai-settings-btn" class="icon-btn" title="ตั้งค่า API Key"><i class="ri-settings-3-line"></i></button>
+                <button id="ai-clear-btn" class="icon-btn" title="ล้างประวัติแชท"><i class="ri-delete-bin-6-line"></i></button>
+                <button id="ai-expand-btn" class="icon-btn desktop-only-btn" title="ขยาย/ย่อหน้าต่างแชท"><i class="ri-fullscreen-line" id="ai-expand-icon"></i></button>
+                <button id="ai-settings-btn" class="icon-btn" title="ตั้งค่า API Key & โมเดล"><i class="ri-settings-3-line"></i></button>
                 <button id="ai-close-btn" class="icon-btn" title="ปิดแชท"><i class="ri-close-line"></i></button>
             </div>
         </div>
+        <div class="ai-coach-toolbar">
+            <div class="ai-mode-switch" role="group" aria-label="AI Speed Mode">
+                <button type="button" id="ai-mode-fast" class="ai-mode-btn active" data-mode="fast" title="ตอบไว ใช้โมเดล Flash/Hydrogen">⚡ Fast</button>
+                <button type="button" id="ai-mode-pro" class="ai-mode-btn" data-mode="pro" title="วิเคราะห์ลึก ใช้โมเดล Pro/Neon">🧠 Deep Pro</button>
+            </div>
+            <div class="ai-mode-switch" role="group" aria-label="Investing Style">
+                <button type="button" id="ai-style-swing" class="ai-mode-btn active" data-style="swing" title="เน้นเล่นรอบ/Swing Trade, R:R, EMA200, S1-S2">🎯 Swing</button>
+                <button type="button" id="ai-style-invest" class="ai-mode-btn" data-style="invest" title="เน้นลงทุนกลาง-ยาว, Valuation, Moat, แนวรับ Weekly">🏛️ Invest</button>
+            </div>
+            <button type="button" id="ai-web-search-btn" class="ai-tool-pill active" title="ให้ Gemini ค้นหาข่าวจากสำนักข่าวการเงินที่น่าเชื่อถือแบบเรียลไทม์">
+                <i class="ri-global-line"></i> <span>ค้นข่าวสด</span>
+            </button>
+            <span class="ai-context-badge" id="ai-context-badge" title="ข้อมูลที่กำลังส่งให้ AI วิเคราะห์">📊 ภาพรวมตลาด</span>
+        </div>
         <div class="ai-chat-messages" id="ai-chat-messages">
             <div class="chat-message ai-message">
-                <div class="message-bubble">สวัสดีครับ! ผมคือ AlphaZone AI ถามข้อมูลหุ้น, แนวรับ-แนวต้าน หรือให้อ่านกราฟเบื้องต้นได้เลยครับ (ต้องตั้งค่า API Key ก่อนนะ)</div>
+                <div class="message-bubble">สวัสดีครับ! ผมคือ <strong>AlphaZone AI Coach</strong> พร้อมวิเคราะห์หุ้นสหรัฐฯ ด้วยข้อมูลจริง (แนวรับ-ต้าน, EMA200, กราฟล่าสุด, หมุดที่คุณปัก, Wall Street Target และข่าวสด)<br><br>กดเลือกคำถามด่วนด้านล่าง หรือพิมพ์ถามชื่อหุ้นได้เลยครับ (ตั้งค่า Gemini API Key ที่ปุ่ม ⚙️ ด้านบนขวา)</div>
             </div>
         </div>
+        <div class="ai-quick-prompts" id="ai-quick-prompts"></div>
         <div class="ai-chat-input-area glass">
-            <textarea id="ai-chat-input" placeholder="พิมพ์ถามชื่อหุ้น เช่น 'วิเคราะห์ AAPL ให้หน่อย'..." rows="1"></textarea>
+            <textarea id="ai-chat-input" placeholder="ถามวิเคราะห์หุ้น เทียบ 2 ตัว หรือให้สแกนหาหุ้นใกล้แนวรับ..." rows="1"></textarea>
             <button id="ai-send-btn" class="icon-btn primary"><i class="ri-send-plane-fill"></i></button>
         </div>
     </div>
 
     <!-- API Key Modal -->
     <div class="modal-overlay" id="ai-config-modal">
-        <div class="modal glass">
-            <h2><i class="ri-key-2-line"></i> ตั้งค่า AI & Gateway</h2>
-            <p style="margin-bottom: 4px; text-align: left; font-size: 13px;">1. OpenAI API Key (จำเป็น)</p>
-            <input type="password" id="ai-api-key-input" class="full-input" placeholder="sk-..." style="margin-bottom: 12px;">
-            
-            <p style="margin-bottom: 4px; text-align: left; font-size: 13px;">2. Vercel Team ID (เพื่อใช้ AI Gateway)</p>
-            <input type="text" id="vercel-team-id-input" class="full-input" placeholder="team_... หรือชื่อ ID ของคุณ" style="margin-bottom: 12px;">
-            
-            <p style="margin-bottom: 4px; text-align: left; font-size: 13px;">3. Discord Webhook URL (สำหรับแชร์บันทึกเข้า Discord)</p>
-            <input type="text" id="discord-webhook-input" class="full-input" placeholder="https://discord.com/api/webhooks/..." style="margin-bottom: 12px;">
-            
-            <p style="margin-bottom: 4px; text-align: left; font-size: 13px;">4. Finnhub API Key (ไม่บังคับ - สำหรับดึงข่าวสดล่าสุดจาก Reuters/CNBC)</p>
-            <input type="text" id="finnhub-api-key-input" class="full-input" placeholder="กรอก Finnhub API Key ฟรี (c...)" style="margin-bottom: 6px;">
-            <p style="margin-bottom: 16px; text-align: left; font-size: 11px; color: #94a3b8;">
-                * รับฟรีที่ <a href="https://finnhub.io" target="_blank" style="color: #38bdf8; text-decoration: underline;">finnhub.io</a> (ฟรี 60 calls/นาที ปลอดภัย ไม่โดนบล็อก)
-            </p>
-            
-            <div class="modal-actions">
-                <button class="btn" id="btn-cancel-ai-api" style="background: var(--card-bg);">ยกเลิก</button>
-                <button class="btn primary" id="btn-save-ai-api">บันทึก</button>
+        <div class="modal glass ai-config-modal-box">
+            <h2><i class="ri-key-2-line"></i> ตั้งค่า AI Coach &amp; โมเดล</h2>
+
+            <div class="ai-cfg-group">
+                <label class="ai-cfg-label" for="ai-api-key-input">1. Gemini API Key (แนะนำ: <code>AIza...</code>) หรือ OpenAI Key (<code>sk-...</code>)</label>
+                <input type="password" id="ai-api-key-input" class="full-input" placeholder="AIza... (จาก Google AI Studio)" style="margin-bottom: 6px;">
+                <p class="ai-cfg-hint">
+                    🔒 Key เก็บเฉพาะในเบราว์เซอร์ของคุณ (ส่งผ่าน Header ไม่ติดใน URL) — แนะนำล็อกสิทธิ์ที่ Google Cloud Console เฉพาะโดเมนเว็บนี้และ Generative Language API
+                </p>
+            </div>
+
+            <div class="ai-cfg-group">
+                <div class="ai-cfg-row-head">
+                    <label class="ai-cfg-label" style="margin-bottom:0;">2. เลือกโมเดล Gemini API</label>
+                    <button type="button" id="btn-fetch-models" class="ai-mini-btn"><i class="ri-refresh-line"></i> โหลดโมเดลจาก Key</button>
+                </div>
+                <div id="ai-models-status" class="ai-cfg-hint" style="margin: 4px 0 8px 0;"></div>
+                <div class="ai-model-grid">
+                    <div>
+                        <span class="ai-sub-label">⚡ Fast Mode (ตอบไว)</span>
+                        <select id="ai-fast-model-select" class="full-input ai-select">
+                            <option value="gemini-3.8-flash">gemini-3.8-flash (แนะนำ)</option>
+                            <option value="gemini-flash-latest">gemini-flash-latest</option>
+                            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="ai-sub-label">🧠 Deep Pro Mode (วิเคราะห์ลึก)</span>
+                        <select id="ai-pro-model-select" class="full-input ai-select">
+                            <option value="gemini-3.1-pro">gemini-3.1-pro (แนะนำ)</option>
+                            <option value="gemini-3-pro-preview">gemini-3-pro-preview</option>
+                            <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-cfg-group">
+                <label class="ai-cfg-label" for="vercel-team-id-input">3. Vercel Team ID (ไม่บังคับ - AI Gateway)</label>
+                <input type="text" id="vercel-team-id-input" class="full-input" placeholder="team_... หรือชื่อ ID ของคุณ" style="margin-bottom: 10px;">
+            </div>
+
+            <div class="ai-cfg-group">
+                <label class="ai-cfg-label" for="discord-webhook-input">4. Discord Webhook URL (ไม่บังคับ - แชร์บทวิเคราะห์เข้า Discord)</label>
+                <input type="text" id="discord-webhook-input" class="full-input" placeholder="https://discord.com/api/webhooks/..." style="margin-bottom: 10px;">
+            </div>
+
+            <div class="ai-cfg-group">
+                <label class="ai-cfg-label" for="finnhub-api-key-input">5. Finnhub API Key (ไม่บังคับ - ดึงข่าว Reuters/CNBC)</label>
+                <input type="text" id="finnhub-api-key-input" class="full-input" placeholder="กรอก Finnhub API Key ฟรี (c...)" style="margin-bottom: 4px;">
+                <p class="ai-cfg-hint">
+                    * รับฟรีที่ <a href="https://finnhub.io" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: underline;">finnhub.io</a> (หรือเปิดปุ่ม "ค้นข่าวสด" ของ Gemini ได้ทันที)
+                </p>
+            </div>
+
+            <div class="modal-actions" style="gap: 10px;">
+                <button class="btn" id="btn-cancel-ai-api" style="background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main);">ยกเลิก</button>
+                <button class="btn primary" id="btn-save-ai-api">บันทึกการตั้งค่า</button>
             </div>
         </div>
     </div>
@@ -497,8 +579,8 @@
         <i class="ri-robot-2-line"></i>
     </button>
 
-    <script src="app.js?v=17_news_tab"></script>
-    <script src="ai-chat.js?v=coach_institutional_v2"></script>
+    <script src="app.js?v=18_pro_workspace"></script>
+    <script src="ai-chat.js?v=coach_5pillar_v5"></script>
 <style>
 /* Premium About Modal */
 .about-overlay {

@@ -1,15 +1,10 @@
-const CACHE_NAME = 'sp-screener-v14';
+const CACHE_NAME = 'alphazone-v18';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/style.css?v=14',
-  '/app.js?v=14',
   'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js',
   'https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js',
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js',
-
 ];
 
 self.addEventListener('install', (event) => {
@@ -33,18 +28,45 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignore API calls to Google Apps Script and Yahoo Finance to prevent Safari redirect/CORS issues
-  if (event.request.url.includes('script.google.com') || event.request.url.includes('googleusercontent.com') || event.request.url.includes('yahoo.com')) {
+  const url = event.request.url;
+  // Ignore external API calls
+  if (
+    url.includes('script.google.com') ||
+    url.includes('googleusercontent.com') ||
+    url.includes('yahoo.com') ||
+    url.includes('generativelanguage.googleapis.com') ||
+    url.includes('api.openai.com') ||
+    url.includes('finnhub.io') ||
+    url.includes('discord.com') ||
+    url.includes('vercel.com')
+  ) {
     return;
   }
+
+  // Network-First for same-origin app shell (.html, .css, .js) so updates appear immediately
+  const isSameOrigin = url.startsWith(self.location.origin);
+  if (isSameOrigin && event.request.method === 'GET') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate for external CDN assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         fetch(event.request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse.clone());
-            });
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
           }
         }).catch(() => {});
         return cachedResponse;

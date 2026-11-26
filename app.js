@@ -52,6 +52,7 @@ const elDetailContent = document.getElementById('detail-content');
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
+    initWorkspaceControls();
     setupEventListeners();
     
     if (!API_URL) {
@@ -730,6 +731,8 @@ function openDetail(symbol) {
     
     // Populate Header
     document.getElementById('d-symbol').textContent = symbol;
+    const hdrFullname = document.getElementById('d-hdr-fullname');
+    if (hdrFullname) hdrFullname.textContent = stock.name || '';
     document.getElementById('d-fullname').textContent = stock.name || '';
     document.getElementById('d-sector').textContent = stock.sector || '';
     
@@ -777,6 +780,9 @@ function openDetail(symbol) {
     document.getElementById('trend-badge-wrap').innerHTML = '';
     
     currentLevelsData = null;
+    window.currentLevelsData = null;
+    syncCompactTelemetry();
+    if (typeof window.refreshAICoachContextUI === 'function') window.refreshAICoachContextUI();
     
     Promise.all([loadLiveLevels(), loadChartData()]).catch(e => console.error("Error loading detail:", e));
 }
@@ -798,12 +804,15 @@ async function loadLiveLevels() {
         
         if (data.success) {
             currentLevelsData = data;
+            window.currentLevelsData = data;
             renderLiveLevels(data);
             if (data.summary) {
                 renderSummary(data.summary);
                 if (currentChartMode === 'info') renderCompanyInfoTab();
             }
+            syncCompactTelemetry();
             addChartAnnotations();
+            if (typeof window.refreshAICoachContextUI === 'function') window.refreshAICoachContextUI();
         } else {
             document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-error-warning-line"></i> ${escapeHtml(data.error)}</p>`;
             document.getElementById('ema-bar').innerHTML = '<span class="ema-chip na">ไม่สามารถโหลดข้อมูล EMA</span>';
@@ -923,10 +932,6 @@ function renderSummary(summary) {
         }
 
         heroFundBox.innerHTML = `
-            ${(f.extPrice != null && f.extChangePct != null) ? `
-            <div class="pm-row pm-ext-row" style="border-bottom: none; justify-content: flex-end;">
-                <div class="pm-val ${f.extChangePct >= 0 ? 'ext-green' : 'ext-red'}">${f.extType === 'PRE' ? '☀️ PRE-MARKET' : '🌙 AFTER-HOURS'}: $${f.extPrice.toFixed(2)} (${f.extChangePct > 0 ? '+' : ''}${f.extChangePct.toFixed(2)}%)</div>
-            </div>` : ''}
             <div class="pm-row">
                 <div class="pm-label">TARGET</div>
                 <div class="pm-val target-val-group" style="flex-wrap: wrap; gap: 4px;">
@@ -956,7 +961,7 @@ function renderSummary(summary) {
                 <div class="pm-val ${parseFloat(f.revenueGrowth || f.revGrowth) > 0 ? 'pm-val-green' : (parseFloat(f.revenueGrowth || f.revGrowth) < 0 ? 'pm-val-red' : '')}">${escapeHtml(String(f.revenueGrowth || f.revGrowth))}</div>
             </div>
         `;
-        heroFundBox.style.display = 'block';
+        heroFundBox.style.display = 'flex';
     } else if (heroFundBox) {
         heroFundBox.style.display = 'none';
         heroFundBox.innerHTML = '';
@@ -1060,6 +1065,8 @@ async function loadChartData() {
             
             latestChartArgs = { points: data.points, emaData: data.emaData || [], livePrice: data.currentPrice };
             renderChart(data.points, data.emaData || [], data.currentPrice);
+            syncCompactTelemetry();
+            if (typeof window.refreshAICoachContextUI === 'function') window.refreshAICoachContextUI();
         } else {
             console.error("Chart API Error:", data.error);
             const canvas = document.getElementById('priceChart');
@@ -1399,6 +1406,11 @@ async function updateFearGreedBadge() {
             score: Math.round(raw.fear_and_greed.score), 
             rating: ratingMap[ratingLower] || raw.fear_and_greed.rating 
         };
+        window.alphaZoneFearGreed = {
+            score: data.score,
+            rating: data.rating,
+            vix: raw.market_volatility_vix ? Math.round(raw.market_volatility_vix.score) : null
+        };
 
         let color = '#94a3b8'; 
         let emoji = '😐';
@@ -1531,14 +1543,14 @@ function removeCustomWatchLine(p) {
 }
 
 function renderCustomWatchLinesUI() {
-    let container = document.querySelector('.canvas-container');
+    let container = document.getElementById('watch-lines-list') || document.querySelector('.chart-footer') || document.querySelector('.canvas-container');
     if (!container) return;
     
     let wlBox = document.getElementById('custom-watchlines-box');
     if (!wlBox) {
         wlBox = document.createElement('div');
         wlBox.id = 'custom-watchlines-box';
-        wlBox.style.cssText = 'padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; background: transparent; margin-top: -10px;';
+        wlBox.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; background: transparent;';
         container.appendChild(wlBox);
     }
 
@@ -1892,3 +1904,204 @@ async function fetchLiveCompanyNewsForTab(symbol) {
         newsBox.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0; text-align:center;">ไม่สามารถดึงข่าวอัตโนมัติได้ สามารถกดอ่านผ่านปุ่มทางลัดด้านบนได้ทันทีครับ</div>';
     }
 }
+
+
+// ==========================================
+// Pro Workspace Layout & Focus Controls
+// ==========================================
+function resizeActiveChartSmoothly() {
+    requestAnimationFrame(() => {
+        if (typeof priceChart !== 'undefined' && priceChart) priceChart.resize();
+    });
+    setTimeout(() => {
+        if (typeof priceChart !== 'undefined' && priceChart) {
+            priceChart.resize();
+        }
+    }, 310);
+}
+
+function initWorkspaceControls() {
+    const heroExpanded = safeGet('AZ_HERO_EXPANDED', '0') === '1';
+    applyHeroCollapsedState(!heroExpanded);
+
+    const canvasContainer = document.querySelector('.canvas-container');
+    if (canvasContainer && typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => {
+            if (typeof priceChart !== 'undefined' && priceChart) {
+                priceChart.resize();
+            }
+        });
+        ro.observe(canvasContainer);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable)) return;
+
+        if (e.key === 'Escape' && document.body.classList.contains('chart-focus-mode')) {
+            toggleChartFocusMode(false);
+        } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'f') {
+            if (elDetailContent && !elDetailContent.classList.contains('hidden')) {
+                e.preventDefault();
+                toggleChartFocusMode();
+            }
+        }
+    });
+}
+
+window.toggleLeftPanel = function(forceCollapsed) {
+    const panel = document.getElementById('list-panel');
+    const icon = document.getElementById('panel-toggle-icon');
+    if (!panel) return;
+    const shouldCollapse = typeof forceCollapsed === 'boolean'
+        ? forceCollapsed
+        : !panel.classList.contains('collapsed');
+
+    panel.classList.toggle('collapsed', shouldCollapse);
+    if (icon) {
+        icon.className = shouldCollapse ? 'ri-arrow-right-s-line' : 'ri-arrow-left-s-line';
+    }
+    resizeActiveChartSmoothly();
+};
+
+function applyHeroCollapsedState(collapsed) {
+    const hero = document.getElementById('hero-card');
+    const bar = document.getElementById('compact-telemetry-bar');
+    const btn = document.getElementById('btn-toggle-hero');
+    const lbl = document.getElementById('lbl-toggle-hero');
+    const icon = document.getElementById('icon-toggle-hero');
+
+    if (hero) hero.classList.toggle('is-collapsed', collapsed);
+    if (bar) bar.classList.toggle('hidden-by-hero', !collapsed);
+    if (btn) btn.classList.toggle('active', !collapsed);
+    if (lbl) lbl.textContent = collapsed ? 'ข้อมูลครบชุด' : 'ย่อสรุป';
+    if (icon) icon.className = collapsed ? 'ri-arrow-down-s-line' : 'ri-arrow-up-s-line';
+}
+
+window.toggleHeroCard = function(forceExpand) {
+    const hero = document.getElementById('hero-card');
+    if (!hero) return;
+    const expand = typeof forceExpand === 'boolean' ? forceExpand : hero.classList.contains('is-collapsed');
+    applyHeroCollapsedState(!expand);
+    safeSet('AZ_HERO_EXPANDED', expand ? '1' : '0');
+    resizeActiveChartSmoothly();
+};
+
+window.toggleChartFocusMode = function(forceFocus) {
+    const enable = typeof forceFocus === 'boolean' ? forceFocus : !document.body.classList.contains('chart-focus-mode');
+    document.body.classList.toggle('chart-focus-mode', enable);
+
+    const btn = document.getElementById('btn-focus-chart');
+    const lbl = document.getElementById('lbl-focus-chart');
+    const icon = document.getElementById('icon-focus-chart');
+    if (btn) btn.classList.toggle('active', enable);
+    if (lbl) lbl.textContent = enable ? 'ออกจากเต็มจอ' : 'ขยายกราฟ';
+    if (icon) icon.className = enable ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line';
+
+    resizeActiveChartSmoothly();
+};
+
+function syncCompactTelemetry() {
+    const priceEl = document.getElementById('d-price');
+    const changeEl = document.getElementById('d-change');
+    const extEl = document.getElementById('d-ext-price');
+    const rsiEl = document.getElementById('d-rsi');
+    const s1El = document.getElementById('d-s1');
+    const r1El = document.getElementById('d-r1');
+
+    const ctPrice = document.getElementById('ct-price');
+    const ctChange = document.getElementById('ct-change');
+    const ctExt = document.getElementById('ct-ext');
+    const ctTrend = document.getElementById('ct-trend');
+    const ctEma = document.getElementById('ct-ema');
+    const ctRsi = document.getElementById('ct-rsi');
+    const ctS1 = document.getElementById('ct-s1');
+    const ctR1 = document.getElementById('ct-r1');
+    const ctTarget = document.getElementById('ct-target');
+
+    if (ctPrice && priceEl) ctPrice.textContent = priceEl.textContent || '—';
+    if (ctChange && changeEl) {
+        ctChange.textContent = changeEl.textContent || '—';
+        ctChange.className = 'ct-change mono' + (changeEl.classList.contains('up') ? ' up' : changeEl.classList.contains('down') ? ' down' : '');
+    }
+    if (ctExt && extEl) {
+        if (extEl.style.display !== 'none' && extEl.textContent) {
+            ctExt.style.display = 'inline-flex';
+            ctExt.textContent = extEl.textContent;
+            ctExt.className = 'ct-ext mono' + (extEl.classList.contains('up') ? ' up' : extEl.classList.contains('down') ? ' down' : '');
+        } else {
+            ctExt.style.display = 'none';
+        }
+    }
+    if (ctRsi && rsiEl) {
+        ctRsi.innerHTML = 'RSI: ' + (rsiEl.innerHTML || '—');
+    }
+    if (ctS1 && s1El) {
+        ctS1.innerHTML = 'S1: ' + (s1El.innerHTML || '—');
+    }
+    if (ctR1 && r1El) {
+        ctR1.innerHTML = 'R1: ' + (r1El.innerHTML || '—');
+    }
+
+    if (ctTrend) {
+        const badge = document.querySelector('#trend-badge-wrap .trend-badge');
+        if (badge) {
+            ctTrend.textContent = badge.textContent.trim();
+            const isUp = badge.classList.contains('up') || badge.classList.contains('strong-up');
+            const isDown = badge.classList.contains('down') || badge.classList.contains('strong-down');
+            ctTrend.className = 'ct-chip ' + (isUp ? 'up' : isDown ? 'down' : 'sideways');
+        } else {
+            ctTrend.textContent = 'กำลังโหลด...';
+            ctTrend.className = 'ct-chip';
+        }
+    }
+
+    if (ctEma) {
+        if (currentLevelsData && currentLevelsData.ema && currentLevelsData.ema.daily) {
+            const e = currentLevelsData.ema;
+            ctEma.style.display = 'inline-flex';
+            ctEma.textContent = 'EMA200D $' + e.daily + ' (' + e.pctD + '%)';
+            ctEma.className = 'ct-chip mono ' + (e.position === 'above' ? 'up' : 'down');
+        } else {
+            ctEma.style.display = 'none';
+        }
+    }
+
+    if (ctTarget) {
+        const f = currentLevelsData && currentLevelsData.summary && currentLevelsData.summary.fundamentals;
+        if (f && f.targetMeanPrice && f.targetMeanPrice !== '-') {
+            const sign = f.upsideRaw > 0 ? '+' : '';
+            ctTarget.style.display = 'inline-flex';
+            ctTarget.textContent = 'Target $' + f.targetMeanPrice + ' (' + sign + f.upside + ')';
+            ctTarget.className = 'ct-chip mono ' + (f.upsideRaw >= 0 ? 'up' : 'down');
+        } else {
+            ctTarget.style.display = 'none';
+        }
+    }
+}
+
+// Bridge helpers for AlphaZone AI Coach (Dynamic Context Injection & Chart Pinning)
+window.getAlphaZoneContextData = function() {
+    return {
+        currentSymbol: currentSymbol || '',
+        currentRange: currentRange || '1D',
+        allStocks: Array.isArray(allStocks) ? allStocks : [],
+        currentLevelsData: currentLevelsData || window.currentLevelsData || null,
+        latestChartArgs: latestChartArgs || null,
+        customWatchLines: (typeof getCustomWatchLines === 'function') ? getCustomWatchLines() : [],
+        favorites: Array.isArray(favorites) ? favorites : [],
+        watchlist: Array.isArray(watchlist) ? watchlist : [],
+        fearGreed: window.alphaZoneFearGreed || null
+    };
+};
+
+window.pinPriceFromAI = function(price) {
+    const num = Number(price);
+    if (!currentSymbol || !Number.isFinite(num) || num <= 0) return false;
+    if (typeof addCustomWatchLineByPrice === 'function') {
+        addCustomWatchLineByPrice(num);
+        if (typeof renderCustomWatchLinesUI === 'function') renderCustomWatchLinesUI();
+        return true;
+    }
+    return false;
+};
