@@ -32,7 +32,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><defs><filter id='g' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='3' result='b1'/><feGaussianBlur stdDeviation='8' result='b2'/><feMerge><feMergeNode in='b2'/><feMergeNode in='b1'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><path d='M 0 50 L 25 50 L 45 10 L 60 90 L 75 50 L 100 50' stroke='%2300ffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' filter='url(%23g)'/></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css?v=20_mobile_polish">
+    <link rel="stylesheet" href="style.css?v=21_telemetry_center">
 </head>
 <body>
 
@@ -274,15 +274,16 @@
                     <!-- Compact Telemetry Strip (visible when Hero is collapsed for maximum chart area) -->
                     <div class="compact-telemetry-bar glass" id="compact-telemetry-bar">
                         <div class="ct-price-cluster">
-                            <span class="ct-price mono" id="ct-price">$0.00</span>
-                            <span class="ct-change mono" id="ct-change">-</span>
+                            <div class="ct-price-main">
+                                <span class="ct-price mono" id="ct-price">$0.00</span>
+                                <span class="ct-change mono" id="ct-change">-</span>
+                            </div>
                             <span class="ct-ext mono" id="ct-ext" style="display:none;"></span>
                         </div>
                         <div class="ct-divider"></div>
                         <div class="ct-pills" id="ct-pills">
                             <span class="ct-chip" id="ct-trend">—</span>
                             <span class="ct-chip mono" id="ct-ema" style="display:none;">EMA —</span>
-                            <span class="ct-chip mono" id="ct-rsi">RSI: —</span>
                             <span class="ct-chip mono" id="ct-s1">S1: —</span>
                             <span class="ct-chip mono" id="ct-r1">R1: —</span>
                             <span class="ct-chip mono" id="ct-target" style="display:none;">Target: —</span>
@@ -579,7 +580,7 @@
         <i class="ri-robot-2-line"></i>
     </button>
 
-    <script src="app.js?v=19_mobile_polish"></script>
+    <script src="app.js?v=20_telemetry_center"></script>
     <script src="ai-chat.js?v=coach_5pillar_v5"></script>
 <style>
 /* Premium About Modal */

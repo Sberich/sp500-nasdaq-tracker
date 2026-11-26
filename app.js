@@ -1284,6 +1284,32 @@ function addChartAnnotations() {
         };
     });
     
+    // Fallback EMA200D reference line when chart range (<200 bars like 1D 6mo) cannot plot curved EMA200
+    const emaSeries0 = latestChartArgs && latestChartArgs.emaData && latestChartArgs.emaData[0] && latestChartArgs.emaData[0].series;
+    const validEmaPts = Array.isArray(emaSeries0) ? emaSeries0.filter(v => v != null).length : 0;
+    if (validEmaPts < 2 && currentLevelsData && currentLevelsData.ema && currentLevelsData.ema.daily && (currentRange === '1D' || currentRange === 'YTD')) {
+        const ema200Val = Number(currentLevelsData.ema.daily);
+        if (Number.isFinite(ema200Val)) {
+            annotations['ema200Ref'] = {
+                type: 'line',
+                yMin: ema200Val,
+                yMax: ema200Val,
+                borderColor: 'rgba(234, 179, 8, 0.7)',
+                borderWidth: 1.5,
+                borderDash: [6, 4],
+                label: {
+                    display: true,
+                    content: 'EMA200D $' + ema200Val.toFixed(2),
+                    position: 'start',
+                    yAdjust: annoYAdj,
+                    backgroundColor: 'transparent',
+                    color: '#eab308',
+                    font: { family: 'IBM Plex Mono', size: annoFontSize, weight: '600' }
+                }
+            };
+        }
+    }
+
     priceChart.options.plugins.annotation = { annotations };
     priceChart.update();
 }
@@ -2037,7 +2063,6 @@ function syncCompactTelemetry() {
     const ctExt = document.getElementById('ct-ext');
     const ctTrend = document.getElementById('ct-trend');
     const ctEma = document.getElementById('ct-ema');
-    const ctRsi = document.getElementById('ct-rsi');
     const ctS1 = document.getElementById('ct-s1');
     const ctR1 = document.getElementById('ct-r1');
     const ctTarget = document.getElementById('ct-target');
@@ -2057,9 +2082,6 @@ function syncCompactTelemetry() {
         } else {
             ctExt.style.display = 'none';
         }
-    }
-    if (ctRsi && rsiEl) {
-        ctRsi.innerHTML = 'RSI ' + (rsiEl.innerHTML || '—');
     }
     if (ctS1 && s1El) {
         ctS1.innerHTML = 'S1 ' + (s1El.innerHTML || '—');
