@@ -1718,8 +1718,9 @@ body.chart-focus-mode .company-info-box { height: calc(100vh - 200px); min-heigh
 .ai-coach-toolbar {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    padding: 8px 14px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.02);
     flex-wrap: wrap;
@@ -1786,32 +1787,29 @@ body.chart-focus-mode .company-info-box { height: calc(100vh - 200px); min-heigh
     border-color: rgba(16, 185, 129, 0.4);
 }
 .ai-context-badge {
-    margin-left: auto;
+    margin-left: 0;
     font-size: 10.5px;
     font-weight: 600;
     color: var(--cyan);
     background: rgba(6, 182, 212, 0.1);
     border: 1px solid rgba(6, 182, 212, 0.25);
-    padding: 3px 8px;
+    padding: 3px 9px;
     border-radius: 999px;
     white-space: nowrap;
-    max-width: 155px;
+    max-width: 175px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .ai-quick-prompts {
-    display: flex;
-    gap: 6px;
-    padding: 8px 14px 4px 14px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 8px 12px 6px 12px;
     border-top: 1px solid var(--border);
 }
-.ai-quick-prompts::-webkit-scrollbar { display: none; }
 .ai-quick-chip {
-    flex-shrink: 0;
-    padding: 5px 10px;
-    border-radius: 999px;
+    padding: 6px 8px;
+    border-radius: 10px;
     font-size: 11px;
     font-weight: 600;
     font-family: inherit;
@@ -1821,6 +1819,9 @@ body.chart-focus-mode .company-info-box { height: calc(100vh - 200px); min-heigh
     cursor: pointer;
     transition: all 0.16s;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
 }
 .ai-quick-chip:hover {
     border-color: var(--blue);
@@ -1838,15 +1839,21 @@ body.chart-focus-mode .company-info-box { height: calc(100vh - 200px); min-heigh
     opacity: 0.9;
 }
 .ai-pin-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
     margin-top: 6px;
+    width: 100%;
 }
 .msg-action-btn.pin-btn {
     border-color: rgba(139, 92, 246, 0.45);
     color: #c4b5fd;
     background: rgba(139, 92, 246, 0.14);
+    justify-content: center;
+    font-size: 10.5px;
+    padding: 5px 6px;
+    white-space: nowrap;
+    width: 100%;
 }
 .msg-action-btn.pin-btn:hover {
     background: rgba(139, 92, 246, 0.28);
@@ -2204,5 +2211,45 @@ body.chart-focus-mode .company-info-box { height: calc(100vh - 200px); min-heigh
         font-size: 22px;
         bottom: 14px;
         right: 14px;
+    }
+    .ai-chat-header {
+        padding: 10px 12px;
+        gap: 6px;
+    }
+    .ai-chat-title {
+        font-size: 14.5px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .ai-chat-actions {
+        gap: 4px;
+        flex-shrink: 0;
+    }
+    .ai-chat-actions .icon-btn {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+    }
+    .ai-chat-messages {
+        padding: 12px;
+    }
+    .chat-message.ai-message {
+        max-width: 96%;
+        width: 100%;
+    }
+    .ai-chat-input-area {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+    #ai-chat-input {
+        font-size: 13px;
+        padding: 9px 11px;
+        min-height: 38px;
+    }
+    #ai-chat-input::placeholder {
+        font-size: 11.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }

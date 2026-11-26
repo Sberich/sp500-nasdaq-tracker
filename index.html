@@ -32,7 +32,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><defs><filter id='g' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='3' result='b1'/><feGaussianBlur stdDeviation='8' result='b2'/><feMerge><feMergeNode in='b2'/><feMergeNode in='b1'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><path d='M 0 50 L 25 50 L 45 10 L 60 90 L 75 50 L 100 50' stroke='%2300ffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' filter='url(%23g)'/></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css?v=21_telemetry_center">
+    <link rel="stylesheet" href="style.css?v=22_ai_mobile_polish">
 </head>
 <body>
 
@@ -501,12 +501,12 @@
         </div>
         <div class="ai-chat-messages" id="ai-chat-messages">
             <div class="chat-message ai-message">
-                <div class="message-bubble">สวัสดีครับ! ผมคือ <strong>AlphaZone AI Coach</strong> พร้อมวิเคราะห์หุ้นสหรัฐฯ ด้วยข้อมูลจริง (แนวรับ-ต้าน, EMA200, กราฟล่าสุด, หมุดที่คุณปัก, Wall Street Target และข่าวสด)<br><br>กดเลือกคำถามด่วนด้านล่าง หรือพิมพ์ถามชื่อหุ้นได้เลยครับ (ตั้งค่า Gemini API Key ที่ปุ่ม ⚙️ ด้านบนขวา)</div>
+                <div class="message-bubble">สวัสดีครับ! ผมคือ <strong>AlphaZone AI Coach</strong><br>วิเคราะห์หุ้นสหรัฐฯ แบบ 5-Pillar ด้วยข้อมูลจริงครบชุด (แนวรับ-ต้าน, EMA200, กราฟ, หมุดที่ปัก, เป้าหมาย Wall Street และข่าวสด)<br><br>เลือกคำถามด่วนด้านล่าง หรือพิมพ์ชื่อหุ้นได้เลยครับ<br><span style="color:var(--text-muted); font-size:12px;">⚙️ ตั้งค่า Gemini API Key และโมเดลได้ที่มุมขวาบน</span></div>
             </div>
         </div>
         <div class="ai-quick-prompts" id="ai-quick-prompts"></div>
         <div class="ai-chat-input-area glass">
-            <textarea id="ai-chat-input" placeholder="ถามวิเคราะห์หุ้น เทียบ 2 ตัว หรือให้สแกนหาหุ้นใกล้แนวรับ..." rows="1"></textarea>
+            <textarea id="ai-chat-input" placeholder="ถามชื่อหุ้น เทียบ 2 ตัว หรือสแกนแนวรับ..." rows="1"></textarea>
             <button id="ai-send-btn" class="icon-btn primary"><i class="ri-send-plane-fill"></i></button>
         </div>
     </div>
@@ -581,7 +581,7 @@
     </button>
 
     <script src="app.js?v=20_telemetry_center"></script>
-    <script src="ai-chat.js?v=coach_5pillar_v5"></script>
+    <script src="ai-chat.js?v=coach_5pillar_v6"></script>
 <style>
 /* Premium About Modal */
 .about-overlay {

@@ -140,17 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         text: `วางแผนจุดเข้าซื้อ (Entry), Stop Loss, TP1 และ TP2 สำหรับ ${sym} พร้อมคำนวณ R:R และสรุปจุดปักหมุดลงกราฟ`
                     },
                     {
-                        label: '🔍 สแกนหุ้นใกล้แนวรับ S1',
+                        label: '🔍 สแกนหุ้นใกล้ S1',
                         text: 'ช่วยสแกนหาหุ้นเด่นในตลาดวันนี้ที่ราคาอยู่ใกล้แนวรับ S1 พร้อมปัจจัยพื้นฐานและข่าวประกอบ'
                     }
                 ]
                 : [
                     {
-                        label: '🌍 สรุปตลาด & ข่าวสำคัญวันนี้',
+                        label: '🌍 สรุปตลาดวันนี้',
                         text: 'ช่วยสรุปภาพรวมตลาดหุ้นสหรัฐฯ วันนี้ Fear & Greed, ข่าวเศรษฐกิจ/Fed สำคัญล่าสุด และจุดที่ควรระวัง'
                     },
                     {
-                        label: '🔍 สแกนหุ้นใกล้แนวรับ S1',
+                        label: '🔍 สแกนหุ้นใกล้ S1',
                         text: 'ช่วยคัด 5 หุ้นเด่นที่อยู่ใกล้แนวรับ S1 ที่สุดวันนี้ พร้อมประเมินความน่าสนใจเชิงพื้นฐานและเทคนิค'
                     },
                     {
@@ -420,13 +420,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (match && match[1]) {
             const labelMap = {
-                entry: { icon: '📌', label: 'Entry' },
-                buy: { icon: '📌', label: 'Entry' },
-                sl: { icon: '🛑', label: 'Stop Loss' },
-                stop: { icon: '🛑', label: 'Stop Loss' },
-                tp1: { icon: '🎯', label: 'TP1' },
-                tp2: { icon: '🎯', label: 'TP2' },
-                target: { icon: '🎯', label: 'Target' }
+                entry: { icon: '📌', label: 'Entry', order: 1 },
+                buy: { icon: '📌', label: 'Entry', order: 1 },
+                sl: { icon: '🛑', label: 'SL', order: 2 },
+                stop: { icon: '🛑', label: 'SL', order: 2 },
+                tp1: { icon: '🎯', label: 'TP1', order: 3 },
+                tp2: { icon: '🎯', label: 'TP2', order: 4 },
+                target: { icon: '🎯', label: 'Target', order: 5 }
             };
             const pairs = match[1].split(',');
             pairs.forEach(pair => {
@@ -435,11 +435,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const key = kv[0].trim().toLowerCase();
                     const val = parseFloat(kv[1].replace(/[^0-9.]/g, ''));
                     if (Number.isFinite(val) && val > 0) {
-                        const meta = labelMap[key] || { icon: '📌', label: key.toUpperCase() };
+                        const meta = labelMap[key] || { icon: '📌', label: key.toUpperCase(), order: 99 };
                         pins.push({ ...meta, price: val });
                     }
                 }
             });
+            pins.sort((a, b) => a.order - b.order);
         }
         return { cleanedText, pins };
     }
