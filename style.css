@@ -813,24 +813,67 @@ body.chart-focus-mode .company-info-box { height: calc(100vh - 200px); min-heigh
     .list-header { padding: 8px 12px 8px 12px !important; }
     .list-header > div:first-child { margin-bottom: 6px !important; }
 
-    .detail-header { padding: 8px 12px; }
+    .detail-header { padding: 6px 10px; gap: 6px; flex-wrap: nowrap; }
+    .detail-header-left { gap: 4px; flex: 1; min-width: 0; }
+    .mobile-back-btn { display: flex; margin-right: 2px; width: 30px; height: 30px; padding: 0; flex-shrink: 0; }
+    .stock-title-group { gap: 6px; }
+    .stock-title-group h2 { font-size: 16px; }
     .hdr-company-name { display: none; }
+    .action-group { gap: 4px; flex-wrap: nowrap; flex-shrink: 0; }
+    .ws-ctrl-btn { padding: 5px 7px; font-size: 13px; border-radius: 7px; }
     .ws-ctrl-btn span { display: none; }
-    .compact-telemetry-bar { padding: 6px 12px; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-    .compact-telemetry-bar::-webkit-scrollbar { display: none; }
-    .ct-price-cluster { flex-wrap: nowrap; flex-shrink: 0; }
-    .ct-pills { flex-wrap: nowrap; flex-shrink: 0; }
-    .ct-divider { display: block; }
-    .detail-scroll { padding: 12px; overflow-x: hidden; }
+    .action-group .icon-btn { width: 30px; height: 30px; font-size: 16px; padding: 0; }
+
+    .compact-telemetry-bar {
+        padding: 6px 10px;
+        gap: 4px;
+        flex-direction: column;
+        align-items: stretch;
+        flex-wrap: nowrap;
+        overflow-x: visible;
+    }
+    .ct-price-cluster {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 6px;
+        width: 100%;
+    }
+    .ct-price { font-size: 16.5px; }
+    .ct-change { font-size: 11px; }
+    .ct-ext { font-size: 10px; padding: 1px 6px; margin-left: auto; }
+    .ct-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        width: 100%;
+    }
+    .ct-chip { font-size: 10px; padding: 2px 6px; border-radius: 5px; line-height: 1.25; }
+    .ct-divider { display: none; }
+    .detail-scroll { padding: 8px 8px 72px 8px; gap: 10px; overflow-x: hidden; }
     
+    .chart-card { padding: 10px 8px; border-radius: 12px; }
+    .chart-tab-bar { padding-bottom: 8px; margin-bottom: 8px; }
+    .chart-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 4px; }
+    .chart-tab-btn { justify-content: center; padding: 6px 4px; font-size: 11px; white-space: nowrap; gap: 4px; }
+    .chart-header { margin-bottom: 8px; gap: 6px; }
+    .range-selector { width: 100%; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 3px; }
+    .range-btn { padding: 5px 2px; font-size: 11px; text-align: center; }
+    .chart-legend { width: 100%; justify-content: space-between; font-size: 10.5px; gap: 6px; flex-wrap: wrap; }
+    .chart-footer { margin-top: 8px; padding: 0 2px; gap: 6px; }
     
     .price-row { align-items: center; margin-bottom: 12px; }
     .price-row h1 { font-size: 36px; }
     
     .trend-container, .ema-container { justify-content: center !important; }
     
-    .canvas-container { height: 380px; margin-left: 0; margin-right: 0; width: 100%; }
+    .canvas-container { height: 350px; margin-left: 0; margin-right: 0; width: 100%; }
     .tv-chart-box, .company-info-box { height: 420px; }
+    #ai-chat-fab { width: 46px; height: 46px; font-size: 22px; bottom: 14px; right: 14px; }
+}
+
+@media (max-width: 520px) {
+    .hide-xs { display: none; }
 }
 
 @media (max-width: 768px) {
@@ -2096,4 +2139,41 @@ body.chart-focus-mode .company-info-box { height: calc(100vh - 200px); min-heigh
     background: rgba(56, 189, 248, 0.15);
     border-color: var(--accent);
     color: var(--accent);
+}
+
+/* Final Mobile Cascade Overrides (equal 3-tab grid, tighter price telemetry, compact AI FAB) */
+@media (max-width: 768px) {
+    .chart-tab-bar { padding-bottom: 8px; margin-bottom: 8px; }
+    .chart-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+        gap: 5px;
+    }
+    .chart-tab-btn {
+        justify-content: center;
+        padding: 6px 4px;
+        font-size: 11px;
+        white-space: nowrap;
+        gap: 4px;
+        min-width: 0;
+    }
+    .compact-telemetry-bar {
+        padding: 5px 10px;
+        gap: 3px;
+    }
+    .ct-pills {
+        gap: 3px;
+    }
+    .ct-chip {
+        font-size: 9.5px;
+        padding: 2px 5px;
+    }
+    #ai-chat-fab {
+        width: 46px;
+        height: 46px;
+        font-size: 22px;
+        bottom: 14px;
+        right: 14px;
+    }
 }

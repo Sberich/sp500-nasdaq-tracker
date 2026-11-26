@@ -1182,6 +1182,9 @@ function renderChart(points, emaData, livePrice) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: isMobile ? { left: 2, right: 2, top: 6, bottom: 0 } : { left: 4, right: 4, top: 8, bottom: 0 }
+            },
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: false },
@@ -1200,7 +1203,6 @@ function renderChart(points, emaData, livePrice) {
                 },
                 zoom: {
                     pan: { enabled: true, mode: 'x' },
-                    pan: { enabled: true, mode: 'x' },
                     zoom: {
                         wheel: { enabled: true, modifierKey: 'ctrl' },
                         pinch: { enabled: true },
@@ -1211,12 +1213,29 @@ function renderChart(points, emaData, livePrice) {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { display: !hideTicks, color: textColor, maxTicksLimit: 6, font: { size: 11 }, align: 'inner' }, bounds: 'data', offset: false
+                    bounds: 'data',
+                    offset: false,
+                    ticks: {
+                        display: !hideTicks,
+                        color: textColor,
+                        maxTicksLimit: isMobile ? 4 : 6,
+                        maxRotation: 0,
+                        minRotation: 0,
+                        autoSkip: true,
+                        padding: isMobile ? 4 : 6,
+                        font: { size: isMobile ? 9.5 : 11 },
+                        align: 'inner'
+                    }
                 },
                 y: {
                     position: 'right',
                     grid: { color: gridColor, drawBorder: false },
-                    ticks: { color: textColor, font: { size: 11, family: 'IBM Plex Mono' }, callback: v => '$' + v }
+                    ticks: {
+                        color: textColor,
+                        padding: isMobile ? 4 : 6,
+                        font: { size: isMobile ? 10 : 11, family: 'IBM Plex Mono' },
+                        callback: v => '$' + v
+                    }
                 }
             }
         }
@@ -1234,11 +1253,15 @@ function addChartAnnotations() {
 
     const annotations = {};
 
+    const isMobileAnno = window.innerWidth <= 768;
+    const annoFontSize = isMobileAnno ? 9 : 10;
+    const annoYAdj = isMobileAnno ? -8 : -10;
+
     const customLines = (typeof getCustomWatchLines === 'function') ? getCustomWatchLines() : [];
     customLines.forEach((p, i) => {
         annotations['customLine'+i] = {
             type: 'line', yMin: p, yMax: p, borderColor: '#8b5cf6', borderWidth: 2, borderDash: [5, 5],
-            label: { display: true, content: '📌 ' + p, position: 'start', backgroundColor: 'transparent', color: '#8b5cf6', font: { size: 10, family: 'IBM Plex Mono', weight: '600' }, yAdjust: -10 }
+            label: { display: true, content: '📌 ' + p, position: 'start', backgroundColor: 'transparent', color: '#8b5cf6', font: { size: annoFontSize, family: 'IBM Plex Mono', weight: '600' }, yAdjust: annoYAdj }
         };
     });
 
@@ -1249,7 +1272,7 @@ function addChartAnnotations() {
         annotations['s'+i] = {
             type: 'line', yMin: s.price, yMax: s.price,
             borderColor: sColor, borderWidth: 1.5, borderDash: [4, 4],
-            label: { display: true, content: 'S'+(i+1)+' $'+s.price.toFixed(2), position: 'end', yAdjust: -10, backgroundColor: 'transparent', color: sColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+            label: { display: true, content: 'S'+(i+1)+' $'+s.price.toFixed(2), position: 'end', yAdjust: annoYAdj, backgroundColor: 'transparent', color: sColor, font: {family: 'IBM Plex Mono', size: annoFontSize, weight: '600'} }
         };
     });
     
@@ -1257,7 +1280,7 @@ function addChartAnnotations() {
         annotations['r'+i] = {
             type: 'line', yMin: r.price, yMax: r.price,
             borderColor: rColor, borderWidth: 1.5, borderDash: [4, 4],
-            label: { display: true, content: 'R'+(resists.length-i)+' $'+r.price.toFixed(2), position: 'end', yAdjust: -10, backgroundColor: 'transparent', color: rColor, font: {family: 'IBM Plex Mono', size: 10, weight: '600'} }
+            label: { display: true, content: 'R'+(resists.length-i)+' $'+r.price.toFixed(2), position: 'end', yAdjust: annoYAdj, backgroundColor: 'transparent', color: rColor, font: {family: 'IBM Plex Mono', size: annoFontSize, weight: '600'} }
         };
     });
     
@@ -2027,26 +2050,29 @@ function syncCompactTelemetry() {
     if (ctExt && extEl) {
         if (extEl.style.display !== 'none' && extEl.textContent) {
             ctExt.style.display = 'inline-flex';
-            ctExt.textContent = extEl.textContent;
+            ctExt.textContent = extEl.textContent
+                .replace('Pre-Market:', 'Pre:')
+                .replace('Post-Market:', 'Post:');
             ctExt.className = 'ct-ext mono' + (extEl.classList.contains('up') ? ' up' : extEl.classList.contains('down') ? ' down' : '');
         } else {
             ctExt.style.display = 'none';
         }
     }
     if (ctRsi && rsiEl) {
-        ctRsi.innerHTML = 'RSI: ' + (rsiEl.innerHTML || '—');
+        ctRsi.innerHTML = 'RSI ' + (rsiEl.innerHTML || '—');
     }
     if (ctS1 && s1El) {
-        ctS1.innerHTML = 'S1: ' + (s1El.innerHTML || '—');
+        ctS1.innerHTML = 'S1 ' + (s1El.innerHTML || '—');
     }
     if (ctR1 && r1El) {
-        ctR1.innerHTML = 'R1: ' + (r1El.innerHTML || '—');
+        ctR1.innerHTML = 'R1 ' + (r1El.innerHTML || '—');
     }
 
     if (ctTrend) {
         const badge = document.querySelector('#trend-badge-wrap .trend-badge');
         if (badge) {
-            ctTrend.textContent = badge.textContent.trim();
+            const shortTrend = badge.textContent.trim().replace(/\s*\([^)]*\)\s*/g, '');
+            ctTrend.textContent = shortTrend;
             const isUp = badge.classList.contains('up') || badge.classList.contains('strong-up');
             const isDown = badge.classList.contains('down') || badge.classList.contains('strong-down');
             ctTrend.className = 'ct-chip ' + (isUp ? 'up' : isDown ? 'down' : 'sideways');
