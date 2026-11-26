@@ -909,7 +909,7 @@ function createLevelRow(type, label, lvl, price) {
             <span class="lr-method">${mStr}</span>
         </div>
         <div class="lr-right">
-            <div class="lr-price">${lvl.price.toFixed(2)}</div>
+            <div class="lr-price">${lvl.price.toFixed(2)} <button type="button" class="lr-pin-btn" onclick="event.stopPropagation(); addCustomWatchLineByPrice(${lvl.price});" title="ปักหมุดแจ้งเตือนที่ระดับนี้"><i class="ri-pushpin-line"></i></button></div>
             <div class="lr-pct ${type}">${pctStr}</div>
         </div>
     </div>`;
@@ -1176,9 +1176,82 @@ function renderChart(points, emaData, livePrice) {
     const hideTicks = isMobile && (currentRange === '1H' || currentRange === '4H');
 
     initChartInteractions();
+    resetChartHudToLatest(points, emaData);
+
+    const alphaCrosshairPlugin = {
+        id: 'alphaCrosshair',
+        afterDraw(chart) {
+            const { ctx, chartArea, scales } = chart;
+            if (!chartArea || !scales || !scales.y) return;
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+
+            // 1. Draw Pin Preview Line when Pin Mode is active
+            if (isPinMode && Number.isFinite(pinPreviewY) && pinPreviewY >= chartArea.top && pinPreviewY <= chartArea.bottom) {
+                const pVal = scales.y.getValueForPixel(pinPreviewY);
+                ctx.save();
+                ctx.strokeStyle = '#a855f7';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 4]);
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, pinPreviewY);
+                ctx.lineTo(chartArea.right, pinPreviewY);
+                ctx.stroke();
+
+                const labelTxt = `📌 $${pVal.toFixed(2)}`;
+                ctx.font = '600 10.5px "IBM Plex Mono", monospace';
+                const txtW = ctx.measureText(labelTxt).width + 10;
+                const boxX = Math.max(chartArea.left + 4, chartArea.right - txtW - 4);
+                const boxY = Math.max(chartArea.top + 2, pinPreviewY - 22);
+                ctx.fillStyle = '#6d28d9';
+                ctx.beginPath();
+                if (ctx.roundRect) ctx.roundRect(boxX, boxY, txtW, 18, 4);
+                else ctx.rect(boxX, boxY, txtW, 18);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(labelTxt, boxX + 5, boxY + 12.5);
+                ctx.restore();
+            }
+
+            // 2. Draw Subtle Vertical + Horizontal Crosshair on active point (without blocking lines)
+            const active = chart.tooltip && chart.tooltip.getActiveElements ? chart.tooltip.getActiveElements() : [];
+            if (active && active.length > 0) {
+                const pt = active[0].element;
+                if (!pt) return;
+                ctx.save();
+                ctx.strokeStyle = isDarkTheme ? 'rgba(148, 163, 184, 0.45)' : 'rgba(71, 85, 105, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+
+                // Vertical line
+                ctx.beginPath();
+                ctx.moveTo(pt.x, chartArea.top);
+                ctx.lineTo(pt.x, chartArea.bottom);
+                ctx.stroke();
+
+                // Horizontal line
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, pt.y);
+                ctx.lineTo(chartArea.right, pt.y);
+                ctx.stroke();
+
+                // Highlight dot
+                ctx.setLineDash([]);
+                ctx.fillStyle = isDarkTheme ? '#60a5fa' : '#2563eb';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = isDarkTheme ? '#09090b' : '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+    };
+
     priceChart = new Chart(canvas, {
         type: 'line',
         data: { labels, datasets },
+        plugins: [alphaCrosshairPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -1189,20 +1262,11 @@ function renderChart(points, emaData, livePrice) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: isDark ? 'rgba(24,24,27,0.9)' : 'rgba(255,255,255,0.9)',
-                    titleColor: isDark ? '#f8fafc' : '#0f172a',
-                    bodyColor: isDark ? '#f8fafc' : '#0f172a',
-                    borderColor: isDark ? '#3f3f46' : '#e2e8f0',
-                    borderWidth: 1,
-                    padding: 12,
-                    titleFont: { family: 'Inter', size: 12 },
-                    bodyFont: { family: 'IBM Plex Mono', size: 14, weight: '600' },
-                    callbacks: {
-                        label: (ctx) => ` ${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`
-                    }
+                    enabled: false,
+                    external: updateChartHudFromTooltip
                 },
                 zoom: {
-                    pan: { enabled: true, mode: 'x' },
+                    pan: { enabled: !isMobile, mode: 'x' },
                     zoom: {
                         wheel: { enabled: true, modifierKey: 'ctrl' },
                         pinch: { enabled: true },
@@ -1258,10 +1322,23 @@ function addChartAnnotations() {
     const annoYAdj = isMobileAnno ? -8 : -10;
 
     const customLines = (typeof getCustomWatchLines === 'function') ? getCustomWatchLines() : [];
+    const curRefPrice = (currentLevelsData && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice) || null;
+    const pinLabelBg = isDark ? 'rgba(24, 24, 27, 0.82)' : 'rgba(255, 255, 255, 0.88)';
     customLines.forEach((p, i) => {
+        const dirArrow = curRefPrice ? (p >= curRefPrice ? '▲' : '▼') : '';
         annotations['customLine'+i] = {
-            type: 'line', yMin: p, yMax: p, borderColor: '#8b5cf6', borderWidth: 2, borderDash: [5, 5],
-            label: { display: true, content: '📌 ' + p, position: 'start', backgroundColor: 'transparent', color: '#8b5cf6', font: { size: annoFontSize, family: 'IBM Plex Mono', weight: '600' }, yAdjust: annoYAdj }
+            type: 'line', yMin: p, yMax: p, borderColor: '#8b5cf6', borderWidth: 1.8, borderDash: [5, 4],
+            label: {
+                display: true,
+                content: `📌 ${dirArrow} $${Number(p).toFixed(2)}`,
+                position: 'start',
+                backgroundColor: pinLabelBg,
+                color: '#a78bfa',
+                padding: { x: 5, y: 2 },
+                borderRadius: 4,
+                font: { size: annoFontSize, family: 'IBM Plex Mono', weight: '600' },
+                yAdjust: annoYAdj
+            }
         };
     });
 
@@ -1613,13 +1690,18 @@ function renderCustomWatchLinesUI() {
     
     wlBox.style.display = 'flex';
     
+    const refPrice = (currentLevelsData && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice) || null;
     lines.forEach(p => {
         const pill = document.createElement('div');
         pill.className = 'wl-pill';
-        // ทำให้ปุ่มเล็กลง ฟอนต์เล็กลง ขอบบางลง ดูมินิมอลขึ้น
-        pill.style.cssText = 'background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); padding: 1px 4px; margin: 0; border-radius: 3px; font-size: 0.65rem; display: flex; align-items: center; gap: 2px; cursor: pointer; transition: 0.2s; line-height: 1;';
-        
-        pill.innerHTML = `<span style="color: #8b5cf6; font-size: 0.65rem;">✕</span> ${p.toFixed(2)}`;
+        pill.style.cssText = 'background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); padding: 3px 7px; margin: 0; border-radius: 6px; font-size: 11px; font-family: "IBM Plex Mono", monospace; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.2s; line-height: 1.2;';
+        let pctTxt = '';
+        if (refPrice && refPrice > 0) {
+            const pct = ((p - refPrice) / refPrice) * 100;
+            pctTxt = ` <span style="opacity:0.8;font-size:10px;">(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)</span>`;
+        }
+        pill.innerHTML = `<span style="color: #a78bfa;">📌</span> $${p.toFixed(2)}${pctTxt} <span style="color:#ef4444;font-weight:700;margin-left:2px;">✕</span>`;
+        pill.title = 'คลิกเพื่อลบหมุดนี้';
         pill.onclick = () => removeCustomWatchLine(p);
         
         pill.onmouseover = () => pill.style.background = 'rgba(139, 92, 246, 0.3)';
@@ -1653,36 +1735,180 @@ if (originalOpenDetail) {
 }
 
 
-// ================== PRICE ALERT INTERACTIONS ==================
+// ================== CROSSHAIR HUD & PRECISION PIN INTERACTIONS ==================
+let isPinMode = false;
+let pinPreviewY = null;
+
+function resetChartHudToLatest(points, emaData) {
+    const hud = document.getElementById('chart-hud-readout');
+    if (!hud) return;
+    if (!points || !points.length) {
+        hud.innerHTML = '<span class="hud-hint">แตะหรือเลื่อนบนกราฟเพื่อดูราคา</span>';
+        return;
+    }
+    const lastIdx = points.length - 1;
+    const lastPt = points[lastIdx];
+    let emaHtml = '';
+    if (emaData && emaData[0] && Array.isArray(emaData[0].series)) {
+        const ev = emaData[0].series[lastIdx];
+        if (ev != null) emaHtml = `<span class="hud-ema">EMA${emaData[0].period}: $${Number(ev).toFixed(2)}</span>`;
+    }
+    hud.innerHTML = `<span class="hud-date">${escapeHtml(lastPt.label)}</span><span class="hud-price">$${Number(lastPt.close).toFixed(2)}</span>${emaHtml}`;
+}
+
+function updateChartHudFromTooltip(context) {
+    const hud = document.getElementById('chart-hud-readout');
+    if (!hud) return;
+    const { tooltip } = context;
+    if (!tooltip || tooltip.opacity === 0 || !tooltip.dataPoints || !tooltip.dataPoints.length) {
+        if (latestChartArgs) resetChartHudToLatest(latestChartArgs.points, latestChartArgs.emaData);
+        return;
+    }
+    const dateLabel = tooltip.title && tooltip.title[0] ? tooltip.title[0] : '';
+    let priceVal = null;
+    let emaTxt = '';
+    tooltip.dataPoints.forEach(dp => {
+        if (dp.datasetIndex === 0) priceVal = dp.parsed.y;
+        else if (dp.parsed && dp.parsed.y != null) {
+            emaTxt += ` <span class="hud-ema">${escapeHtml(dp.dataset.label)}: $${dp.parsed.y.toFixed(2)}</span>`;
+        }
+    });
+    if (priceVal == null) return;
+    hud.innerHTML = `<span class="hud-date">${escapeHtml(dateLabel)}</span><span class="hud-price">$${priceVal.toFixed(2)}</span>${emaTxt}`;
+}
+
+window.togglePinMode = function(forceState) {
+    isPinMode = typeof forceState === 'boolean' ? forceState : !isPinMode;
+    pinPreviewY = null;
+    const btn = document.getElementById('btn-pin-mode');
+    const container = document.querySelector('.canvas-container');
+    const hud = document.getElementById('chart-hud-readout');
+    if (btn) btn.classList.toggle('active', isPinMode);
+    if (container) container.classList.toggle('pin-mode-active', isPinMode);
+    if (hud && isPinMode) {
+        hud.innerHTML = '<span style="color:#c4b5fd;">📌 แตะ/คลิกบนกราฟเพื่อปักหมุดระดับราคาที่ต้องการ</span>';
+    } else if (latestChartArgs) {
+        resetChartHudToLatest(latestChartArgs.points, latestChartArgs.emaData);
+    }
+    if (priceChart) priceChart.draw();
+};
+
+window.toggleManualPinBar = function(forceOpen) {
+    const bar = document.getElementById('pin-input-bar');
+    const btn = document.getElementById('btn-pin-manual');
+    const input = document.getElementById('pin-price-input');
+    if (!bar) return;
+    const open = typeof forceOpen === 'boolean' ? forceOpen : bar.classList.contains('hidden');
+    bar.classList.toggle('hidden', !open);
+    if (btn) btn.classList.toggle('active', open);
+    if (open && input) {
+        const curPrice = (currentLevelsData && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice);
+        if (!input.value && curPrice) input.value = Number(curPrice).toFixed(2);
+        input.focus();
+        input.select();
+    }
+};
+
+window.submitManualPin = function() {
+    const input = document.getElementById('pin-price-input');
+    if (!input) return;
+    const val = parseFloat(input.value);
+    if (!Number.isFinite(val) || val <= 0) {
+        alert('กรุณากรอกราคาที่ถูกต้อง (มากกว่า 0)');
+        return;
+    }
+    addCustomWatchLineByPrice(val);
+    input.value = '';
+    toggleManualPinBar(false);
+};
+
+window.pinCurrentLivePrice = function() {
+    const curPrice = (currentLevelsData && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice);
+    if (curPrice && Number.isFinite(Number(curPrice))) {
+        addCustomWatchLineByPrice(Number(curPrice));
+        toggleManualPinBar(false);
+    }
+};
+
 function getPriceFromEvent(e) {
     if (!priceChart) return null;
     const canvasPosition = Chart.helpers.getRelativePosition(e, priceChart);
     const dataY = priceChart.scales.y.getValueForPixel(canvasPosition.y);
-    return dataY;
+    return { price: dataY, y: canvasPosition.y };
 }
 
 function chartDoubleClickHandler(e) {
-    const p = getPriceFromEvent(e);
-    if (p) addCustomWatchLineByPrice(p);
+    const res = getPriceFromEvent(e);
+    if (res && res.price > 0) addCustomWatchLineByPrice(res.price);
+}
+
+function chartPointerMoveHandler(e) {
+    if (!isPinMode || !priceChart) return;
+    const src = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    const res = getPriceFromEvent(src);
+    if (res) {
+        pinPreviewY = res.y;
+        priceChart.draw();
+    }
+}
+
+function chartClickPinHandler(e) {
+    if (!isPinMode || !priceChart) return;
+    const res = getPriceFromEvent(e);
+    if (res && res.price > 0) {
+        addCustomWatchLineByPrice(res.price);
+        togglePinMode(false);
+    }
+}
+
+function chartTouchEndPinHandler(e) {
+    if (!isPinMode || !priceChart) return;
+    const touch = e.changedTouches && e.changedTouches[0];
+    if (!touch) return;
+    const res = getPriceFromEvent(touch);
+    if (res && res.price > 0) {
+        e.preventDefault();
+        addCustomWatchLineByPrice(res.price);
+        togglePinMode(false);
+    }
+}
+
+function chartMouseLeaveHandler() {
+    pinPreviewY = null;
+    if (latestChartArgs) resetChartHudToLatest(latestChartArgs.points, latestChartArgs.emaData);
+    if (priceChart) priceChart.draw();
 }
 
 function initChartInteractions() {
     const canvas = document.getElementById('priceChart');
     if (!canvas) return;
-    
-    // Remove old listeners to prevent duplicates
+
+    if (canvas._hammer) {
+        canvas._hammer.destroy();
+        canvas._hammer = null;
+    }
+
     canvas.removeEventListener('dblclick', chartDoubleClickHandler);
+    canvas.removeEventListener('mousemove', chartPointerMoveHandler);
+    canvas.removeEventListener('touchmove', chartPointerMoveHandler);
+    canvas.removeEventListener('click', chartClickPinHandler);
+    canvas.removeEventListener('touchend', chartTouchEndPinHandler);
+    canvas.removeEventListener('mouseleave', chartMouseLeaveHandler);
+
     canvas.addEventListener('dblclick', chartDoubleClickHandler);
-    
-    // Long press for mobile (using Hammer.js if available)
-    if (typeof Hammer !== 'undefined') {
-        if (canvas._hammer) canvas._hammer.destroy();
-        canvas._hammer = new Hammer(canvas);
-        canvas._hammer.on('press', function(ev) {
-            const p = getPriceFromEvent(ev.srcEvent);
-            if (p) {
-                if (navigator.vibrate) navigator.vibrate(50); // Feedback
-                addCustomWatchLineByPrice(p);
+    canvas.addEventListener('mousemove', chartPointerMoveHandler);
+    canvas.addEventListener('touchmove', chartPointerMoveHandler, { passive: true });
+    canvas.addEventListener('click', chartClickPinHandler);
+    canvas.addEventListener('touchend', chartTouchEndPinHandler);
+    canvas.addEventListener('mouseleave', chartMouseLeaveHandler);
+
+    const pinInput = document.getElementById('pin-price-input');
+    if (pinInput && !pinInput.dataset.boundEnter) {
+        pinInput.dataset.boundEnter = '1';
+        pinInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitManualPin();
             }
         });
     }
