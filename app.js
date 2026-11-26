@@ -190,9 +190,10 @@ function setupEventListeners() {
         currentTradingViewSymbol = '';
     });
 
-    // Reset Zoom
+    // Reset Zoom (hide button once reset)
     document.getElementById('btn-reset-zoom').addEventListener('click', () => {
-        if(priceChart) priceChart.resetZoom();
+        if (priceChart) priceChart.resetZoom();
+        document.getElementById('btn-reset-zoom').classList.add('hidden');
     });
 
     // Sector Custom Dropdown
@@ -781,7 +782,13 @@ function openDetail(symbol) {
     
     currentLevelsData = null;
     window.currentLevelsData = null;
+    latestChartArgs = null;
+    if (typeof togglePinMode === 'function') togglePinMode(false);
+    if (typeof toggleManualPinBar === 'function') toggleManualPinBar(false);
+    const resetZoomBtn = document.getElementById('btn-reset-zoom');
+    if (resetZoomBtn) resetZoomBtn.classList.add('hidden');
     syncCompactTelemetry();
+    renderCustomWatchLinesUI();
     if (typeof window.refreshAICoachContextUI === 'function') window.refreshAICoachContextUI();
     
     Promise.all([loadLiveLevels(), loadChartData()]).catch(e => console.error("Error loading detail:", e));
@@ -812,6 +819,7 @@ async function loadLiveLevels() {
             }
             syncCompactTelemetry();
             addChartAnnotations();
+            renderCustomWatchLinesUI();
             if (typeof window.refreshAICoachContextUI === 'function') window.refreshAICoachContextUI();
         } else {
             document.getElementById('levels-list').innerHTML = `<p class="help-text" style="color:var(--red)"><i class="ri-error-warning-line"></i> ${escapeHtml(data.error)}</p>`;
@@ -1066,6 +1074,7 @@ async function loadChartData() {
             latestChartArgs = { points: data.points, emaData: data.emaData || [], livePrice: data.currentPrice };
             renderChart(data.points, data.emaData || [], data.currentPrice);
             syncCompactTelemetry();
+            renderCustomWatchLinesUI();
             if (typeof window.refreshAICoachContextUI === 'function') window.refreshAICoachContextUI();
         } else {
             console.error("Chart API Error:", data.error);
@@ -1176,7 +1185,9 @@ function renderChart(points, emaData, livePrice) {
     const hideTicks = isMobile && (currentRange === '1H' || currentRange === '4H');
 
     initChartInteractions();
-    resetChartHudToLatest(points, emaData);
+    hideChartFloatHud();
+    const resetBtnInit = document.getElementById('btn-reset-zoom');
+    if (resetBtnInit) resetBtnInit.classList.add('hidden');
 
     const alphaCrosshairPlugin = {
         id: 'alphaCrosshair',
@@ -1266,11 +1277,22 @@ function renderChart(points, emaData, livePrice) {
                     external: updateChartHudFromTooltip
                 },
                 zoom: {
-                    pan: { enabled: !isMobile, mode: 'x' },
+                    pan: {
+                        enabled: !isMobile,
+                        mode: 'x',
+                        onPanComplete: () => {
+                            const rb = document.getElementById('btn-reset-zoom');
+                            if (rb) rb.classList.remove('hidden');
+                        }
+                    },
                     zoom: {
                         wheel: { enabled: true, modifierKey: 'ctrl' },
                         pinch: { enabled: true },
-                        mode: 'x'
+                        mode: 'x',
+                        onZoomComplete: () => {
+                            const rb = document.getElementById('btn-reset-zoom');
+                            if (rb) rb.classList.remove('hidden');
+                        }
                     }
                 }
             },
@@ -1321,8 +1343,14 @@ function addChartAnnotations() {
     const annoFontSize = isMobileAnno ? 9 : 10;
     const annoYAdj = isMobileAnno ? -8 : -10;
 
+    const activeStockObj = (typeof allStocks !== 'undefined' && Array.isArray(allStocks))
+        ? allStocks.find(s => s.symbol === currentSymbol)
+        : null;
     const customLines = (typeof getCustomWatchLines === 'function') ? getCustomWatchLines() : [];
-    const curRefPrice = (currentLevelsData && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice) || null;
+    const curRefPrice = (currentLevelsData && currentLevelsData.symbol === currentSymbol && currentLevelsData.price)
+        || (latestChartArgs && latestChartArgs.livePrice)
+        || (activeStockObj && activeStockObj.price)
+        || null;
     const pinLabelBg = isDark ? 'rgba(24, 24, 27, 0.82)' : 'rgba(255, 255, 255, 0.88)';
     customLines.forEach((p, i) => {
         const dirArrow = curRefPrice ? (p >= curRefPrice ? '▲' : '▼') : '';
@@ -1669,59 +1697,53 @@ function removeCustomWatchLine(p) {
 }
 
 function renderCustomWatchLinesUI() {
-    let container = document.getElementById('watch-lines-list') || document.querySelector('.chart-footer') || document.querySelector('.canvas-container');
+    let container = document.getElementById('watch-lines-list');
     if (!container) return;
-    
-    let wlBox = document.getElementById('custom-watchlines-box');
-    if (!wlBox) {
-        wlBox = document.createElement('div');
-        wlBox.id = 'custom-watchlines-box';
-        wlBox.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; background: transparent;';
-        container.appendChild(wlBox);
-    }
 
     const lines = getCustomWatchLines();
-    wlBox.innerHTML = '';
-    
+    container.innerHTML = '';
+
     if (lines.length === 0) {
-        wlBox.style.display = 'none';
+        container.style.display = 'none';
         return;
     }
-    
-    wlBox.style.display = 'flex';
-    
-    const refPrice = (currentLevelsData && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice) || null;
+
+    container.style.display = 'flex';
+
+    const activeStockObj = (typeof allStocks !== 'undefined' && Array.isArray(allStocks))
+        ? allStocks.find(s => s.symbol === currentSymbol)
+        : null;
+    const refPrice = (currentLevelsData && currentLevelsData.symbol === currentSymbol && currentLevelsData.price)
+        || (latestChartArgs && latestChartArgs.livePrice)
+        || (activeStockObj && activeStockObj.price)
+        || null;
+
     lines.forEach(p => {
         const pill = document.createElement('div');
         pill.className = 'wl-pill';
-        pill.style.cssText = 'background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); padding: 3px 7px; margin: 0; border-radius: 6px; font-size: 11px; font-family: "IBM Plex Mono", monospace; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.2s; line-height: 1.2;';
         let pctTxt = '';
         if (refPrice && refPrice > 0) {
             const pct = ((p - refPrice) / refPrice) * 100;
-            pctTxt = ` <span style="opacity:0.8;font-size:10px;">(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)</span>`;
+            pctTxt = ` <span style="opacity:0.78;font-size:9.5px;">(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)</span>`;
         }
-        pill.innerHTML = `<span style="color: #a78bfa;">📌</span> $${p.toFixed(2)}${pctTxt} <span style="color:#ef4444;font-weight:700;margin-left:2px;">✕</span>`;
+        pill.innerHTML = `<span class="wl-dot"></span>$${p.toFixed(2)}${pctTxt}<span style="color:#ef4444;font-weight:700;margin-left:2px;">✕</span>`;
         pill.title = 'คลิกเพื่อลบหมุดนี้';
         pill.onclick = () => removeCustomWatchLine(p);
-        
-        pill.onmouseover = () => pill.style.background = 'rgba(139, 92, 246, 0.3)';
-        pill.onmouseout = () => pill.style.background = 'rgba(139, 92, 246, 0.15)';
-        
-        wlBox.appendChild(pill);
+        container.appendChild(pill);
     });
-    
-    // เปลี่ยนปุ่ม Reset เป็นข้อความเล็กๆ ไม่แย่งซีนปุ่ม Reset Zoom
+
     if (lines.length > 1) {
-        const btnClearAll = document.createElement('div');
-        btnClearAll.style.cssText = 'margin-left: auto; color: #ef4444; font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 2px 6px; opacity: 0.8;';
-        btnClearAll.innerHTML = 'ล้างทั้งหมด';
+        const btnClearAll = document.createElement('button');
+        btnClearAll.type = 'button';
+        btnClearAll.className = 'wl-clear-btn';
+        btnClearAll.textContent = 'ล้างทั้งหมด';
         btnClearAll.onclick = () => {
-            if(confirm('ต้องการลบปักหมุดทั้งหมดของ ' + currentSymbol + ' ใช่หรือไม่?')) {
+            if (confirm('ต้องการลบปักหมุดทั้งหมดของ ' + currentSymbol + ' ใช่หรือไม่?')) {
                 saveCustomWatchLines([]);
-                if(typeof addChartAnnotations === 'function') addChartAnnotations();
+                if (typeof addChartAnnotations === 'function') addChartAnnotations();
             }
         };
-        wlBox.appendChild(btnClearAll);
+        container.appendChild(btnClearAll);
     }
 }
 
@@ -1735,33 +1757,32 @@ if (originalOpenDetail) {
 }
 
 
-// ================== CROSSHAIR HUD & PRECISION PIN INTERACTIONS ==================
+// ================== FLOATING CROSSHAIR HUD & PRECISION PIN INTERACTIONS ==================
 let isPinMode = false;
 let pinPreviewY = null;
 
-function resetChartHudToLatest(points, emaData) {
-    const hud = document.getElementById('chart-hud-readout');
+function showChartFloatHud(html) {
+    const hud = document.getElementById('chart-float-hud');
     if (!hud) return;
-    if (!points || !points.length) {
-        hud.innerHTML = '<span class="hud-hint">แตะหรือเลื่อนบนกราฟเพื่อดูราคา</span>';
+    hud.innerHTML = html;
+    hud.classList.add('is-visible');
+}
+
+function hideChartFloatHud() {
+    const hud = document.getElementById('chart-float-hud');
+    if (!hud) return;
+    if (isPinMode) {
+        hud.innerHTML = '<span style="color:#c4b5fd;">📌 แตะกราฟเพื่อปักหมุด</span>';
+        hud.classList.add('is-visible');
         return;
     }
-    const lastIdx = points.length - 1;
-    const lastPt = points[lastIdx];
-    let emaHtml = '';
-    if (emaData && emaData[0] && Array.isArray(emaData[0].series)) {
-        const ev = emaData[0].series[lastIdx];
-        if (ev != null) emaHtml = `<span class="hud-ema">EMA${emaData[0].period}: $${Number(ev).toFixed(2)}</span>`;
-    }
-    hud.innerHTML = `<span class="hud-date">${escapeHtml(lastPt.label)}</span><span class="hud-price">$${Number(lastPt.close).toFixed(2)}</span>${emaHtml}`;
+    hud.classList.remove('is-visible');
 }
 
 function updateChartHudFromTooltip(context) {
-    const hud = document.getElementById('chart-hud-readout');
-    if (!hud) return;
     const { tooltip } = context;
     if (!tooltip || tooltip.opacity === 0 || !tooltip.dataPoints || !tooltip.dataPoints.length) {
-        if (latestChartArgs) resetChartHudToLatest(latestChartArgs.points, latestChartArgs.emaData);
+        hideChartFloatHud();
         return;
     }
     const dateLabel = tooltip.title && tooltip.title[0] ? tooltip.title[0] : '';
@@ -1773,8 +1794,11 @@ function updateChartHudFromTooltip(context) {
             emaTxt += ` <span class="hud-ema">${escapeHtml(dp.dataset.label)}: $${dp.parsed.y.toFixed(2)}</span>`;
         }
     });
-    if (priceVal == null) return;
-    hud.innerHTML = `<span class="hud-date">${escapeHtml(dateLabel)}</span><span class="hud-price">$${priceVal.toFixed(2)}</span>${emaTxt}`;
+    if (priceVal == null) {
+        hideChartFloatHud();
+        return;
+    }
+    showChartFloatHud(`<span class="hud-date">${escapeHtml(dateLabel)}</span><span class="hud-price">$${priceVal.toFixed(2)}</span>${emaTxt}`);
 }
 
 window.togglePinMode = function(forceState) {
@@ -1782,13 +1806,12 @@ window.togglePinMode = function(forceState) {
     pinPreviewY = null;
     const btn = document.getElementById('btn-pin-mode');
     const container = document.querySelector('.canvas-container');
-    const hud = document.getElementById('chart-hud-readout');
     if (btn) btn.classList.toggle('active', isPinMode);
     if (container) container.classList.toggle('pin-mode-active', isPinMode);
-    if (hud && isPinMode) {
-        hud.innerHTML = '<span style="color:#c4b5fd;">📌 แตะ/คลิกบนกราฟเพื่อปักหมุดระดับราคาที่ต้องการ</span>';
-    } else if (latestChartArgs) {
-        resetChartHudToLatest(latestChartArgs.points, latestChartArgs.emaData);
+    if (isPinMode) {
+        showChartFloatHud('<span style="color:#c4b5fd;">📌 แตะกราฟเพื่อปักหมุด</span>');
+    } else {
+        hideChartFloatHud();
     }
     if (priceChart) priceChart.draw();
 };
@@ -1802,7 +1825,7 @@ window.toggleManualPinBar = function(forceOpen) {
     bar.classList.toggle('hidden', !open);
     if (btn) btn.classList.toggle('active', open);
     if (open && input) {
-        const curPrice = (currentLevelsData && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice);
+        const curPrice = (currentLevelsData && currentLevelsData.symbol === currentSymbol && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice);
         if (!input.value && curPrice) input.value = Number(curPrice).toFixed(2);
         input.focus();
         input.select();
@@ -1823,7 +1846,7 @@ window.submitManualPin = function() {
 };
 
 window.pinCurrentLivePrice = function() {
-    const curPrice = (currentLevelsData && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice);
+    const curPrice = (currentLevelsData && currentLevelsData.symbol === currentSymbol && currentLevelsData.price) || (latestChartArgs && latestChartArgs.livePrice);
     if (curPrice && Number.isFinite(Number(curPrice))) {
         addCustomWatchLineByPrice(Number(curPrice));
         toggleManualPinBar(false);
@@ -1862,21 +1885,33 @@ function chartClickPinHandler(e) {
 }
 
 function chartTouchEndPinHandler(e) {
-    if (!isPinMode || !priceChart) return;
-    const touch = e.changedTouches && e.changedTouches[0];
-    if (!touch) return;
-    const res = getPriceFromEvent(touch);
-    if (res && res.price > 0) {
-        e.preventDefault();
-        addCustomWatchLineByPrice(res.price);
-        togglePinMode(false);
+    if (!priceChart) return;
+    if (isPinMode) {
+        const touch = e.changedTouches && e.changedTouches[0];
+        if (!touch) return;
+        const res = getPriceFromEvent(touch);
+        if (res && res.price > 0) {
+            e.preventDefault();
+            addCustomWatchLineByPrice(res.price);
+            togglePinMode(false);
+        }
+        return;
     }
+    // Hide floating crosshair pill & active point when finger lifts off chart
+    hideChartFloatHud();
+    if (priceChart.setActiveElements) priceChart.setActiveElements([]);
+    if (priceChart.tooltip && priceChart.tooltip.setActiveElements) priceChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+    priceChart.update('none');
 }
 
 function chartMouseLeaveHandler() {
     pinPreviewY = null;
-    if (latestChartArgs) resetChartHudToLatest(latestChartArgs.points, latestChartArgs.emaData);
-    if (priceChart) priceChart.draw();
+    hideChartFloatHud();
+    if (priceChart) {
+        if (priceChart.setActiveElements) priceChart.setActiveElements([]);
+        if (priceChart.tooltip && priceChart.tooltip.setActiveElements) priceChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+        priceChart.update('none');
+    }
 }
 
 function initChartInteractions() {

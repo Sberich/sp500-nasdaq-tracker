@@ -674,33 +674,65 @@ input {
 #priceChart { width: 100% !important; height: 100% !important; display: block; touch-action: pan-y; }
 .canvas-container.pin-mode-active #priceChart { cursor: crosshair; touch-action: none; }
 
-/* Crosshair HUD & Precision Pin Controls */
-.chart-hud-bar {
+/* Floating Compact Crosshair Pill (top of chart, appears ONLY on hover/scrub) */
+.chart-float-hud {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    z-index: 15;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.84);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    font-size: 11px;
+    font-weight: 600;
+    color: #f8fafc;
+    white-space: nowrap;
+    max-width: calc(100% - 16px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.14s ease, transform 0.14s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+}
+[data-theme="light"] .chart-float-hud {
+    background: rgba(255, 255, 255, 0.92);
+    color: #0f172a;
+    border-color: var(--border-strong);
+}
+.chart-float-hud.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+.hud-date { color: #94a3b8; font-size: 10.5px; }
+[data-theme="light"] .hud-date { color: #64748b; }
+.hud-price { color: #60a5fa; font-weight: 700; font-size: 11.5px; }
+[data-theme="light"] .hud-price { color: #2563eb; }
+.hud-ema { color: #eab308; font-weight: 600; font-size: 10.5px; }
+
+/* Compact Chart Footer & Pin Controls */
+.chart-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 0 4px;
+    width: 100%;
+}
+.chart-tools-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 6px 10px;
-    margin-bottom: 8px;
-    border-radius: 10px;
-    background: var(--bg);
-    border: 1px solid var(--border);
+    gap: 6px;
     flex-wrap: wrap;
 }
-.chart-hud-readout {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-main);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    min-height: 22px;
-}
-.hud-hint { color: var(--text-muted); font-weight: 500; font-family: inherit; font-size: 11.5px; }
-.hud-date { color: var(--text-muted); font-size: 11px; }
-.hud-price { color: var(--blue); font-weight: 700; font-size: 12.5px; }
-.hud-ema { color: #eab308; font-weight: 600; font-size: 11.5px; }
 .chart-pin-controls {
     display: inline-flex;
     align-items: center;
@@ -713,7 +745,7 @@ input {
     gap: 4px;
     padding: 4px 9px;
     border-radius: 7px;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
     font-family: inherit;
     background: var(--card-bg);
@@ -732,9 +764,8 @@ input {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
-    margin-bottom: 8px;
-    border-radius: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
     background: rgba(139, 92, 246, 0.08);
     border: 1px solid rgba(139, 92, 246, 0.3);
     flex-wrap: wrap;
@@ -742,15 +773,63 @@ input {
 .pin-num-input {
     flex: 1;
     min-width: 110px;
-    padding: 5px 10px;
-    border-radius: 7px;
+    padding: 4px 8px;
+    border-radius: 6px;
     border: 1px solid var(--border-strong);
     background: var(--bg);
     color: var(--text-main);
-    font-size: 12.5px;
+    font-size: 12px;
     outline: none;
 }
 .pin-num-input:focus { border-color: #8b5cf6; }
+
+.watch-lines-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+.watch-lines-list:empty { display: none; }
+.wl-pill {
+    background: rgba(139, 92, 246, 0.14);
+    color: #c4b5fd;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+    line-height: 1.25;
+}
+[data-theme="light"] .wl-pill {
+    color: #6d28d9;
+    background: rgba(139, 92, 246, 0.1);
+}
+.wl-pill:hover { background: rgba(139, 92, 246, 0.28); }
+.wl-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #a855f7;
+    flex-shrink: 0;
+}
+.wl-clear-btn {
+    margin-left: auto;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    cursor: pointer;
+    font-family: inherit;
+}
+.wl-clear-btn:hover { background: rgba(239, 68, 68, 0.2); }
 
 .lr-pin-btn {
     background: rgba(139, 92, 246, 0.12);
@@ -765,10 +844,11 @@ input {
 }
 .lr-pin-btn:hover { background: rgba(139, 92, 246, 0.28); color: #ffffff; }
 @media (max-width: 768px) {
-    .chart-hud-bar { padding: 5px 8px; gap: 6px; margin-bottom: 6px; }
-    .chart-hud-readout { font-size: 11px; width: 100%; justify-content: center; }
-    .chart-pin-controls { width: 100%; justify-content: center; }
-    .hud-btn { font-size: 11px; padding: 4px 8px; }
+    .chart-float-hud { font-size: 10px; padding: 2.5px 8px; gap: 6px; }
+    .hud-price { font-size: 10.5px; }
+    .chart-tools-row { justify-content: center; }
+    .hud-btn { font-size: 10.5px; padding: 4px 8px; }
+    .wl-pill { font-size: 9.5px; padding: 2px 5px; }
 }
 .tv-chart-box { height: clamp(480px, 62vh, 760px); }
 .company-info-box { height: clamp(480px, 62vh, 760px); }
