@@ -1,0 +1,6 @@
+# Temporary / scratch files not meant for GitHub Pages
+diff_clean.txt
+New Text Document.txt
+*.log
+.DS_Store
+Thumbs.db
