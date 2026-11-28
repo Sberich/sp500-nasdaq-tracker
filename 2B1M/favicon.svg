@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <radialGradient id="fgGlow" cx="32%" cy="28%" r="72%">
+      <stop offset="0%" stop-color="#14b8a6" />
+      <stop offset="68%" stop-color="#072b28" />
+      <stop offset="100%" stop-color="#031413" />
+    </radialGradient>
+    <linearGradient id="fgRing" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#a7f3d0" />
+      <stop offset="55%" stop-color="#2dd4bf" />
+      <stop offset="100%" stop-color="#fde68a" />
+    </linearGradient>
+    <linearGradient id="fgPeak" x1="16" y1="44" x2="48" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="55%" stop-color="#99f6e4" />
+      <stop offset="100%" stop-color="#fde68a" />
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="29" fill="url(#fgGlow)" stroke="url(#fgRing)" stroke-width="3.5" />
+  <circle cx="32" cy="32" r="22" stroke="#5eead4" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="4 3" />
+  <path d="M16 42L26 27L33 34L45 19" stroke="url(#fgPeak)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M38 19H45.5V26.5" stroke="#fde68a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="22.5" cy="19.5" r="2.5" fill="#fde68a" />
+</svg>
