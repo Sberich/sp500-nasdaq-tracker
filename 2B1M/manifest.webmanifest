@@ -1,0 +1,31 @@
+{
+  "name": "2B1M • Portfolio Terminal",
+  "short_name": "2B1M",
+  "description": "ระบบบริหารพอร์ตหุ้นอเมริกา Rebalance & DCA แบบมืออาชีพ",
+  "start_url": "/2B1M/",
+  "scope": "/2B1M/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#072321",
+  "theme_color": "#072321",
+  "icons": [
+    {
+      "src": "/2B1M/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/2B1M/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/2B1M/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
