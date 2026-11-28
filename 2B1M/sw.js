@@ -1,4 +1,4 @@
-const CACHE_NAME = '2b1m-pwa-v1';
+const CACHE_NAME = '2b1m-pwa-v2';
 const SHELL_ASSETS = [
   '/2B1M/',
   '/2B1M/index.html',
@@ -42,6 +42,14 @@ self.addEventListener('fetch', (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') {
+            return caches.match('/2B1M/index.html', { ignoreSearch: true });
+          }
+          return undefined;
+        })
+      )
   );
 });
